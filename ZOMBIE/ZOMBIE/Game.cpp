@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// @author Moniks Nusi
 /// @date 
 /// </summary>
@@ -8,8 +8,18 @@
 
 
 Game::Game() :
-	m_window{ sf::VideoMode{ 1200U, 1000U, 32U }, "SFML Game" }
+	m_window{ sf::VideoMode{ 1200U, 1000U, 32U }, "SFML Game" },
+	m_mapGenerator(8, 6, 100)
 {
+	m_mapGenerator.generate();
+
+	for (int y = 0; y < 6; ++y)
+		for (int x = 0; x < 8; ++x)
+			if (m_mapGenerator.getRoom(x, y).color == sf::Color::Green)
+				m_currentRoom = { x, y };
+
+	m_cameraView = m_window.getDefaultView();
+	m_cameraView.setCenter(m_window.getSize().x / 2.f, m_window.getSize().y / 2.f);
 }
 
 Game::~Game()
@@ -68,11 +78,127 @@ void Game::update(sf::Time t_deltaTime)
 	}
 	m_player.hadnleInput();
 	m_player.update(t_deltaTime);
+
+	const auto& current = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
+	sf::Vector2f pos = m_player.getPosition();
+	sf::Vector2f size = m_player.getSize();
+	sf::Vector2f center = pos + size / 2.f;
+
+	const int windowW = m_window.getSize().x;
+	const int windowH = m_window.getSize().y;
+	float margin = 40.f;
+
+	// Handle active sliding transition
+	if (m_transitionState == TransitionState::Sliding)
+	{
+		sf::Vector2f direction = m_slideTarget - m_slideOffset;
+		float distance = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+
+		if (distance > 1.f)
+		{
+			sf::Vector2f moveDir = direction / distance;
+			m_slideOffset += moveDir * m_slideSpeed * t_deltaTime.asSeconds();
+
+			// Clamp to prevent overshoot
+			if (std::abs(m_slideOffset.x - m_slideTarget.x) < 2.f)
+				m_slideOffset.x = m_slideTarget.x;
+			if (std::abs(m_slideOffset.y - m_slideTarget.y) < 2.f)
+				m_slideOffset.y = m_slideTarget.y;
+
+			// Move camera
+			m_cameraView.setCenter(windowW / 2.f + m_slideOffset.x,
+				windowH / 2.f + m_slideOffset.y);
+		}
+		else
+		{
+			m_slideOffset = m_slideTarget;
+			m_transitionState = TransitionState::None;
+			m_currentRoom = m_nextRoom;
+
+			// Reset player position to center of new room
+			m_player.setPosition(windowW / 2.f - size.x / 2.f,
+				windowH / 2.f - size.y / 2.f);
+
+			// reset slide and camera to new room origin
+			m_slideOffset = { 0.f, 0.f };
+			m_cameraView.setCenter(windowW / 2.f, windowH / 2.f);
+		}
+
+		return;
+	}
+
+	// Detect when player walks into an exit
+	if (m_transitionState == TransitionState::None)
+	{
+		sf::Vector2i newRoom = m_currentRoom;
+
+		if (center.x > windowW - margin && current.exitRight)
+			newRoom.x++;
+		else if (center.x < margin && current.exitLeft)
+			newRoom.x--;
+		else if (center.y > windowH - margin && current.exitDown)
+			newRoom.y++;
+		else if (center.y < margin && current.exitUp)
+			newRoom.y--;
+
+		if (newRoom != m_currentRoom)
+		{
+			m_transitionState = TransitionState::Sliding;
+			m_nextRoom = newRoom;
+
+			// Calculate the world-space offset difference
+			sf::Vector2f direction(
+				(newRoom.x - m_currentRoom.x) * (float)windowW,
+				(newRoom.y - m_currentRoom.y) * (float)windowH
+			);
+
+			m_slideStart = m_slideOffset;
+			m_slideTarget = m_slideStart + direction;
+		}
+	}
 }
 
 void Game::render()
 {
+	m_window.setView(m_cameraView);
+
 	m_window.clear(sf::Color(50,50,50));
+
+	const int windowW = m_window.getSize().x;
+	const int windowH = m_window.getSize().y;
+
+	float tileW = (float)windowW / MapGenerator::Room::width;
+	float tileH = (float)windowH / MapGenerator::Room::height;
+	float tileSize = std::min(tileW, tileH);
+	sf::RectangleShape tile(sf::Vector2f(tileSize, tileSize));
+
+	auto drawRoom = [&](const MapGenerator::Room& room, sf::Vector2f offset) {
+		for (int i = 0; i < room.height; ++i)
+		{
+			for (int j = 0; j < room.width; ++j)
+			{
+				tile.setFillColor(room.tiles[i][j] == 1 ? sf::Color(70, 70, 70)
+					: sf::Color(150, 150, 150));
+				tile.setPosition(offset.x + j * tileSize, offset.y + i * tileSize);
+				m_window.draw(tile);
+			}
+		}
+	};
+
+	drawRoom(m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y), sf::Vector2f(0.f, 0.f));
+
+	// If sliding, draw next room adjacent based on slide direction
+	if (m_transitionState == TransitionState::Sliding)
+	{
+		sf::Vector2f offset(
+			(m_nextRoom.x - m_currentRoom.x) * (float)windowW,
+			(m_nextRoom.y - m_currentRoom.y) * (float)windowH
+		);
+
+		drawRoom(m_mapGenerator.getRoom(m_nextRoom.x, m_nextRoom.y), offset);
+	}
+
+
 	m_player.render(m_window);
 	m_window.display();
 }

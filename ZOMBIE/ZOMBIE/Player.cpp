@@ -9,7 +9,7 @@ Player::Player()
 	}
 	m_sprite.setTexture(m_texture);
 	m_sprite.setTextureRect(sf::IntRect(0, 0, m_frameSize.x, m_frameSize.y));
-	m_sprite.setPosition(600.f, 500.f);
+	m_sprite.setPosition(400.f, 400.f);
 	m_sprite.setScale(2,2);
 
 }
@@ -58,6 +58,11 @@ void Player::update(sf::Time dt)
 		m_currentFrame = 0;
 		m_sprite.setTextureRect(sf::IntRect(0, m_currentRow * m_frameSize.y, m_frameSize.x, m_frameSize.y));
 	}
+}
+
+sf::Vector2f Player::getSize() const
+{
+	return sf::Vector2f(m_sprite.getGlobalBounds().width, m_sprite.getGlobalBounds().height);
 }
 
 void Player::render(sf::RenderWindow& window)
