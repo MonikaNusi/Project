@@ -16,11 +16,11 @@ MapGenerator::MapGenerator(int roomsX, int roomsY, int roomSize)
     if (!m_floorTexture.loadFromFile("ASSETS/IMAGES/floor.png"))
         std::cout << "Failed to load floor texture\n";
 
+
     m_wallTexture.setRepeated(true);
     m_floorTexture.setRepeated(true);
 
-    m_wallTexture.setSmooth(false);
-    m_floorTexture.setSmooth(false);
+
 }
 
 const MapGenerator::Room& MapGenerator::getRoom(int x, int y) const

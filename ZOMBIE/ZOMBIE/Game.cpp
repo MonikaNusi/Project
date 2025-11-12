@@ -217,6 +217,7 @@ void Game::render()
 		drawRoom(m_mapGenerator.getRoom(m_nextRoom.x, m_nextRoom.y), offset);
 	}
 
+	//m_mapGenerator.render(m_window);
 	m_player.render(m_window);
 	m_window.display();
 }
