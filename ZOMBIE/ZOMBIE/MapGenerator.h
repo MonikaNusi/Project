@@ -8,8 +8,12 @@ public:
 
     struct Room
     {
+        enum class RoomType { Empty, Normal, Treasure, Trap, Boss, Start };
+
         bool active = false;
-        int type = 0;
+        //int type = 0;
+        RoomType type = RoomType::Empty;
+
         sf::Color color = sf::Color(50, 50, 50);
         bool exitUp = false, exitDown = false, exitLeft = false, exitRight = false;
 
@@ -25,12 +29,20 @@ public:
     struct Room;
     const Room& getRoom(int x, int y) const;
 
+    const sf::Texture& getWallTexture() const { return m_wallTexture; }
+    const sf::Texture& getFloorTexture() const { return m_floorTexture; }
+
 private:
 
     int m_roomsX;
     int m_roomsY;
     int m_roomSize;
     int m_gap = 5; // spacing between rooms
+
+    sf::Texture m_wallTexture;
+    sf::Texture m_floorTexture;
+
+    bool isPathValid(const sf::Vector2i& start, const sf::Vector2i& goal) const;
 
     std::vector<std::vector<Room>> m_rooms;
     sf::RectangleShape m_roomShape;

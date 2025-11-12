@@ -161,43 +161,61 @@ void Game::update(sf::Time t_deltaTime)
 void Game::render()
 {
 	m_window.setView(m_cameraView);
-
-	m_window.clear(sf::Color(50,50,50));
+	m_window.clear(sf::Color(50, 50, 50));
 
 	const int windowW = m_window.getSize().x;
 	const int windowH = m_window.getSize().y;
 
-	float tileW = (float)windowW / MapGenerator::Room::width;
-	float tileH = (float)windowH / MapGenerator::Room::height;
-	float tileSize = std::min(tileW, tileH);
-	sf::RectangleShape tile(sf::Vector2f(tileSize, tileSize));
+	auto drawRoom = [&](const MapGenerator::Room& room, sf::Vector2f offset)
+	{
+		float tileW = (float)windowW / MapGenerator::Room::width;
+		float tileH = (float)windowH / MapGenerator::Room::height;
+		float tileSize = std::min(tileW, tileH);
+		sf::RectangleShape tile(sf::Vector2f(tileSize, tileSize));
 
-	auto drawRoom = [&](const MapGenerator::Room& room, sf::Vector2f offset) {
 		for (int i = 0; i < room.height; ++i)
 		{
 			for (int j = 0; j < room.width; ++j)
 			{
-				tile.setFillColor(room.tiles[i][j] == 1 ? sf::Color(70, 70, 70)
-					: sf::Color(150, 150, 150));
 				tile.setPosition(offset.x + j * tileSize, offset.y + i * tileSize);
+
+				// We’ll repeat the small texture across the large game tile.
+				const int texSize = 32; // <-- change this to 16 if your texture is 16x16
+				int repeatX = static_cast<int>(tileSize) / texSize;
+				int repeatY = static_cast<int>(tileSize) / texSize;
+
+				// avoid 0
+				if (repeatX < 1) repeatX = 1;
+				if (repeatY < 1) repeatY = 1;
+
+				if (room.tiles[i][j] == 1) // wall
+				{
+					tile.setTexture(&m_mapGenerator.getWallTexture());
+					tile.setTextureRect(sf::IntRect(0, 0, texSize * repeatX, texSize * repeatY));
+				}
+				else // floor
+				{
+					tile.setTexture(&m_mapGenerator.getFloorTexture());
+					tile.setTextureRect(sf::IntRect(0, 0, texSize * repeatX, texSize * repeatY));
+				}
+
 				m_window.draw(tile);
 			}
 		}
 	};
 
-	drawRoom(m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y), sf::Vector2f(0.f, 0.f));
+	// draw current room
+	drawRoom(m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y), { 0.f, 0.f });
 
-	// If sliding, draw next room adjacent based on slide direction
+	// draw next room if sliding
 	if (m_transitionState == TransitionState::Sliding)
 	{
 		sf::Vector2f offset(
 			(m_nextRoom.x - m_currentRoom.x) * (float)windowW,
 			(m_nextRoom.y - m_currentRoom.y) * (float)windowH
 		);
-
 		drawRoom(m_mapGenerator.getRoom(m_nextRoom.x, m_nextRoom.y), offset);
 	}
-
 
 	m_player.render(m_window);
 	m_window.display();

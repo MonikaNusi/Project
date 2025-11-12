@@ -1,7 +1,4 @@
-﻿  Game.cpp
-  MapGenerator.cpp
-C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\MapGenerator.cpp(207,25): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
-C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\MapGenerator.cpp(208,25): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
-  main.cpp
-  Generating Code...
+﻿  MapGenerator.cpp
+C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\MapGenerator.cpp(306,25): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\MapGenerator.cpp(307,25): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
   ZOMBIE.vcxproj -> C:\Users\Mony\Desktop\project\Project\ZOMBIE\Debug\ZOMBIE.exe
