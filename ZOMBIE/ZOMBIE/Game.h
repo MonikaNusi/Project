@@ -34,10 +34,14 @@ private:
 	void processKeys(sf::Event t_event);
 	void update(sf::Time t_deltaTime);
 	void render();
+	bool isCollidingWithWall(const sf::FloatRect& playerBox);
 
 	Player m_player;
 	MapGenerator m_mapGenerator;
 	sf::Vector2i m_currentRoom{ 0, 0 };
+	sf::Vector2f m_lastPlayerPos;
+
+	sf::FloatRect m_debugPlayerBox;
 
 	sf::RenderWindow m_window; // main SFML window
 	bool m_exitGame{ false }; // control exiting game

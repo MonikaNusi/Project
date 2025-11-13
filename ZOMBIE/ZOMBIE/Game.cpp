@@ -20,6 +20,7 @@ Game::Game() :
 
 	m_cameraView = m_window.getDefaultView();
 	m_cameraView.setCenter(m_window.getSize().x / 2.f, m_window.getSize().y / 2.f);
+	m_lastPlayerPos = m_player.getPosition();
 }
 
 Game::~Game()
@@ -76,14 +77,48 @@ void Game::update(sf::Time t_deltaTime)
 	{
 		m_window.close();
 	}
+
+	sf::Vector2f oldPos = m_player.getPosition();
+
 	m_player.hadnleInput();
 	m_player.update(t_deltaTime);
+	sf::FloatRect spriteBounds = m_player.getSpriteBounds();
 
-	const auto& current = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
+
+	// Tweakable hitbox % values
+	float hbWidthPercent = 0.30f;
+	float hbHeightPercent = 0.12f;
+	float yOffsetPercent = 0.28f;  // lift hitbox upward
+
+	float hbWidth = spriteBounds.width * hbWidthPercent;
+	float hbHeight = spriteBounds.height * hbHeightPercent;
+	float yOffset = spriteBounds.height * yOffsetPercent;
+
+	sf::FloatRect playerBox(
+		spriteBounds.left + (spriteBounds.width - hbWidth) * 0.5f,
+		spriteBounds.top + spriteBounds.height - hbHeight - yOffset,
+		hbWidth,
+		hbHeight
+	);
+
+	m_debugPlayerBox = playerBox;
+
+	//If this new position collides with wall undo movement
+	if (isCollidingWithWall(playerBox))
+	{
+		m_player.setPosition(oldPos.x, oldPos.y);
+
+		// update bounds after resetting
+		spriteBounds = m_player.getSpriteBounds();
+	}
+
+
+
 	sf::Vector2f pos = m_player.getPosition();
 	sf::Vector2f size = m_player.getSize();
 	sf::Vector2f center = pos + size / 2.f;
 
+	const auto& current = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
 	const int windowW = m_window.getSize().x;
 	const int windowH = m_window.getSize().y;
 	float margin = 40.f;
@@ -158,6 +193,43 @@ void Game::update(sf::Time t_deltaTime)
 	}
 }
 
+bool Game::isCollidingWithWall(const sf::FloatRect& playerBox)
+{
+	const auto& room = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
+
+	const int windowW = m_window.getSize().x;
+	const int windowH = m_window.getSize().y;
+
+	float tileW = (float)windowW / room.width;
+	float tileH = (float)windowH / room.height;
+
+	// Find which tiles the player is overlapping
+	int leftTile = playerBox.left / tileW;
+	int rightTile = (playerBox.left + playerBox.width) / tileW;
+	int topTile = playerBox.top / tileH;
+	int bottomTile = (playerBox.top + playerBox.height) / tileH;
+
+	// Clamp bounds
+	leftTile = std::max(0, std::min(room.width - 1, leftTile));
+	rightTile = std::max(0, std::min(room.width - 1, rightTile));
+	topTile = std::max(0, std::min(room.height - 1, topTile));
+	bottomTile = std::max(0, std::min(room.height - 1, bottomTile));
+
+	// Check any wall tile
+	for (int y = topTile; y <= bottomTile; ++y)
+	{
+		for (int x = leftTile; x <= rightTile; ++x)
+		{
+			if (room.tiles[y][x] == 1) // wall tile
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 void Game::render()
 {
 	m_window.setView(m_cameraView);
@@ -168,35 +240,36 @@ void Game::render()
 
 	auto drawRoom = [&](const MapGenerator::Room& room, sf::Vector2f offset)
 	{
-		float tileW = (float)windowW / MapGenerator::Room::width;
-		float tileH = (float)windowH / MapGenerator::Room::height;
-		float tileSize = std::min(tileW, tileH);
-		sf::RectangleShape tile(sf::Vector2f(tileSize, tileSize));
 
+		float tileW = static_cast<float>(windowW) / room.width;
+		float tileH = static_cast<float>(windowH) / room.height;
+		sf::RectangleShape tile(sf::Vector2f(tileW, tileH));
+		
 		for (int i = 0; i < room.height; ++i)
 		{
 			for (int j = 0; j < room.width; ++j)
 			{
-				tile.setPosition(offset.x + j * tileSize, offset.y + i * tileSize);
 
-				// We’ll repeat the small texture across the large game tile.
-				const int texSize = 32; // <-- change this to 16 if your texture is 16x16
-				int repeatX = static_cast<int>(tileSize) / texSize;
-				int repeatY = static_cast<int>(tileSize) / texSize;
+				tile.setPosition(offset.x + j * tileW, offset.y + i * tileH);
 
-				// avoid 0
+				const int texSize = 16;
+				int repeatX = static_cast<int>(std::ceil(tileW / texSize));
+				int repeatY = static_cast<int>(std::ceil(tileH / texSize));
+			
 				if (repeatX < 1) repeatX = 1;
 				if (repeatY < 1) repeatY = 1;
 
 				if (room.tiles[i][j] == 1) // wall
 				{
-					tile.setTexture(&m_mapGenerator.getWallTexture());
-					tile.setTextureRect(sf::IntRect(0, 0, texSize * repeatX, texSize * repeatY));
+					//tile.setTexture(&m_mapGenerator.getWallTexture());
+					//tile.setTextureRect(sf::IntRect(0, 0, texSize * repeatX, texSize * repeatY));
+					tile.setFillColor(sf::Color(40, 40, 40));
 				}
 				else // floor
 				{
-					tile.setTexture(&m_mapGenerator.getFloorTexture());
-					tile.setTextureRect(sf::IntRect(0, 0, texSize * repeatX, texSize * repeatY));
+					tile.setFillColor(sf::Color(200, 200, 200));
+					//tile.setTexture(&m_mapGenerator.getFloorTexture());
+					//tile.setTextureRect(sf::IntRect(0, 0, texSize * repeatX, texSize * repeatY));
 				}
 
 				m_window.draw(tile);
@@ -219,5 +292,12 @@ void Game::render()
 
 	//m_mapGenerator.render(m_window);
 	m_player.render(m_window);
+		
+	sf::RectangleShape hb;
+	hb.setPosition(m_debugPlayerBox.left, m_debugPlayerBox.top);
+	hb.setSize({ m_debugPlayerBox.width, m_debugPlayerBox.height });
+	hb.setFillColor(sf::Color(255, 0, 0, 120));
+	m_window.draw(hb);
+
 	m_window.display();
 }

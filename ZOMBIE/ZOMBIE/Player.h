@@ -12,12 +12,14 @@ public:
 	sf::Vector2f getPosition() const { return m_sprite.getPosition(); }
 	void setPosition(float x, float y) { m_sprite.setPosition(x, y); }
 
+	sf::FloatRect getSpriteBounds() const { return m_sprite.getGlobalBounds(); }
+
 private:
 	sf::Sprite m_sprite;
 	sf::Texture m_texture;
 
 	sf::Vector2f m_velocity{ 0.f,0.f };
-	float m_speed{ 150.f };
+	float m_speed{ 200.f };
 
 
 	int m_currentFrame{ 0 };

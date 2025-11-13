@@ -82,3 +82,5 @@ void Player::animate(sf::Time dt)
 
 	m_sprite.setTextureRect(sf::IntRect(m_currentFrame * m_frameSize.x, m_currentRow * m_frameSize.y, m_frameSize.x, m_frameSize.y));
 }
+
+
