@@ -27,6 +27,8 @@ private:
 	sf::Vector2f m_nextOffset;
 	float m_slideSpeed = 800.f;
 
+	sf::Vector2f m_playerSlideStartPos;
+
 	sf::Vector2i m_nextRoom{ 0, 0 };
 	sf::View m_cameraView;
 
@@ -35,6 +37,9 @@ private:
 	void update(sf::Time t_deltaTime);
 	void render();
 	bool isCollidingWithWall(const sf::FloatRect& playerBox);
+	sf::Vector2f findSafeSpawn(const MapGenerator::Room& room);
+	sf::Vector2f getDoorSpawn(const MapGenerator::Room& room,
+		int dirX, int dirY);
 
 	Player m_player;
 	MapGenerator m_mapGenerator;

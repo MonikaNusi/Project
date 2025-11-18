@@ -18,9 +18,19 @@ Game::Game() :
 			if (m_mapGenerator.getRoom(x, y).color == sf::Color::Green)
 				m_currentRoom = { x, y };
 
+	const auto& newRoomObj = m_mapGenerator.getRoom(m_nextRoom.x, m_nextRoom.y);
+
+	int dirX = m_nextRoom.x - m_currentRoom.x;  // -1, 0, or 1
+	int dirY = m_nextRoom.y - m_currentRoom.y;  // -1, 0, or 1
+
+	sf::Vector2f doorPos = getDoorSpawn(newRoomObj, dirX, dirY);
+	m_player.setPosition(doorPos.x, doorPos.y);
+
+
 	m_cameraView = m_window.getDefaultView();
 	m_cameraView.setCenter(m_window.getSize().x / 2.f, m_window.getSize().y / 2.f);
-	m_lastPlayerPos = m_player.getPosition();
+	//m_lastPlayerPos = m_player.getPosition();
+
 }
 
 Game::~Game()
@@ -80,8 +90,12 @@ void Game::update(sf::Time t_deltaTime)
 
 	sf::Vector2f oldPos = m_player.getPosition();
 
-	m_player.hadnleInput();
-	m_player.update(t_deltaTime);
+	if (m_transitionState != TransitionState::Sliding)
+	{
+		m_player.hadnleInput();
+		m_player.update(t_deltaTime);
+		std::cout<<oldPos.y<<std::endl;
+	}
 	sf::FloatRect spriteBounds = m_player.getSpriteBounds();
 
 
@@ -148,13 +162,20 @@ void Game::update(sf::Time t_deltaTime)
 		{
 			m_slideOffset = m_slideTarget;
 			m_transitionState = TransitionState::None;
+			int oldX = m_currentRoom.x;
+			int oldY = m_currentRoom.y;
 			m_currentRoom = m_nextRoom;
 
-			// Reset player position to center of new room
-			m_player.setPosition(windowW / 2.f - size.x / 2.f,
-				windowH / 2.f - size.y / 2.f);
+			//safe space in the next room
 
-			// reset slide and camera to new room origin
+			const auto& nextRoom = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
+
+			int dirX = m_currentRoom.x - oldX;
+			int dirY = m_currentRoom.y - oldY;
+
+			sf::Vector2f doorPos = getDoorSpawn(nextRoom, dirX, dirY);
+			m_player.setPosition(doorPos.x, doorPos.y);
+
 			m_slideOffset = { 0.f, 0.f };
 			m_cameraView.setCenter(windowW / 2.f, windowH / 2.f);
 		}
@@ -191,6 +212,62 @@ void Game::update(sf::Time t_deltaTime)
 			m_slideTarget = m_slideStart + direction;
 		}
 	}
+}
+
+sf::Vector2f Game::findSafeSpawn(const MapGenerator::Room& room)
+{
+	const int windowW = m_window.getSize().x;
+	const int windowH = m_window.getSize().y;
+
+	float tileW = (float)windowW / room.width;
+	float tileH = (float)windowH / room.height;
+
+	//Try the center first
+	int cx = room.width / 2;
+	int cy = room.height / 2;
+
+	if (room.tiles[cy][cx] == 0) //FLOOR
+	{
+		return { cx * tileW, cy * tileH };
+	}
+
+	//Otherwise search for ANY nearby floor tile
+	for (int y = 1; y < room.height - 1; ++y)
+	{
+		for (int x = 1; x < room.width - 1; ++x)
+		{
+			if (room.tiles[y][x] == 0)
+			{
+				return { x * tileW, y * tileH };
+			}
+		}
+	}
+
+	return { windowW / 2.f, windowH / 2.f };
+}
+
+sf::Vector2f Game::getDoorSpawn(const MapGenerator::Room& room,
+	int dirX, int dirY)
+{
+	const int windowW = m_window.getSize().x;
+	const int windowH = m_window.getSize().y;
+
+	float tileW = (float)windowW / room.width;
+	float tileH = (float)windowH / room.height;
+
+	int midX = room.width / 2;
+	int midY = room.height / 2;
+
+	// Coming from left - spawn at left door
+	if (dirX == 1)     return { 1 * tileW,       midY * tileH };
+	// Coming from right - spawn at right door
+	if (dirX == -1)    return { (room.width - 2) * tileW, midY * tileH };
+	// Coming from top - spawn at top door
+	if (dirY == 1)     return { midX * tileW,    1 * tileH };
+	// Coming from bottom - spawn at bottom door
+	if (dirY == -1)    return { midX * tileW,    (room.height - 2) * tileH };
+
+	return { midX * tileW, midY * tileH };
 }
 
 bool Game::isCollidingWithWall(const sf::FloatRect& playerBox)
@@ -290,7 +367,7 @@ void Game::render()
 		drawRoom(m_mapGenerator.getRoom(m_nextRoom.x, m_nextRoom.y), offset);
 	}
 
-	//m_mapGenerator.render(m_window);
+	m_mapGenerator.render(m_window);
 	m_player.render(m_window);
 		
 	sf::RectangleShape hb;
