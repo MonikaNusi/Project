@@ -367,7 +367,7 @@ void Game::render()
 		drawRoom(m_mapGenerator.getRoom(m_nextRoom.x, m_nextRoom.y), offset);
 	}
 
-	m_mapGenerator.render(m_window);
+	//m_mapGenerator.render(m_window);
 	m_player.render(m_window);
 		
 	sf::RectangleShape hb;
@@ -376,5 +376,72 @@ void Game::render()
 	hb.setFillColor(sf::Color(255, 0, 0, 120));
 	m_window.draw(hb);
 
+	m_window.setView(m_window.getDefaultView());
+
+	drawMiniMap();
+
 	m_window.display();
+}
+
+void Game::drawMiniMap()
+{
+	const int mapWidth = 8;
+	const int mapHeight = 6;
+
+	const float cellSize = 18.f;
+	const float spacing = 2.f;
+	const float padding = 10.f;
+
+	//minimap pixel size
+	float mapPixelW = mapWidth * (cellSize + spacing);
+	float mapPixelH = mapHeight * (cellSize + spacing);
+
+	sf::RectangleShape frame;
+	frame.setSize(sf::Vector2f(mapPixelW + padding * 2,
+		mapPixelH + padding * 2));
+	frame.setPosition(20.f, 20.f);
+	frame.setFillColor(sf::Color(20, 20, 20, 180));
+	frame.setOutlineThickness(3.f);
+	frame.setOutlineColor(sf::Color(200, 200, 200, 180));
+
+	m_window.draw(frame);
+
+	// Starting position inside frame
+	float startX = frame.getPosition().x + padding;
+	float startY = frame.getPosition().y + padding;
+
+	sf::RectangleShape cell(sf::Vector2f(cellSize, cellSize));
+
+	// Draw rooms
+	for (int y = 0; y < mapHeight; ++y)
+	{
+		for (int x = 0; x < mapWidth; ++x)
+		{
+			const auto& room = m_mapGenerator.getRoom(x, y);
+
+			// inactive = dark gray
+			if (!room.active)
+				cell.setFillColor(sf::Color(60, 60, 60));
+			else
+				cell.setFillColor(sf::Color(150, 150, 150));
+
+			// start room = green
+			if (room.type == MapGenerator::Room::RoomType::Start)
+				cell.setFillColor(sf::Color::Green);
+
+			// boss room = red
+			if (room.type == MapGenerator::Room::RoomType::Boss)
+				cell.setFillColor(sf::Color::Red);
+
+			// current room highlight = yellow
+			if (x == m_currentRoom.x && y == m_currentRoom.y)
+				cell.setFillColor(sf::Color(255, 230, 50));
+
+			// Set position inside minimap frame
+			cell.setPosition(startX + x * (cellSize + spacing),
+				startY + y * (cellSize + spacing));
+
+			m_window.draw(cell);
+		}
+	}
 }

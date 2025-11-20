@@ -36,6 +36,7 @@ private:
 	void processKeys(sf::Event t_event);
 	void update(sf::Time t_deltaTime);
 	void render();
+	void drawMiniMap();
 	bool isCollidingWithWall(const sf::FloatRect& playerBox);
 	sf::Vector2f findSafeSpawn(const MapGenerator::Room& room);
 	sf::Vector2f getDoorSpawn(const MapGenerator::Room& room,
