@@ -31,6 +31,9 @@ Game::Game() :
 	m_cameraView.setCenter(m_window.getSize().x / 2.f, m_window.getSize().y / 2.f);
 	//m_lastPlayerPos = m_player.getPosition();
 
+	m_visitedRooms.resize(6, std::vector<bool>(8, false));
+	m_visitedRooms[m_currentRoom.y][m_currentRoom.x] = true; //start rooms visited
+
 }
 
 Game::~Game()
@@ -166,7 +169,7 @@ void Game::update(sf::Time t_deltaTime)
 			int oldY = m_currentRoom.y;
 			m_currentRoom = m_nextRoom;
 
-			//safe space in the next room
+			m_visitedRooms[m_currentRoom.y][m_currentRoom.x] = true;
 
 			const auto& nextRoom = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
 
@@ -419,19 +422,28 @@ void Game::drawMiniMap()
 		{
 			const auto& room = m_mapGenerator.getRoom(x, y);
 
-			// inactive = dark gray
-			if (!room.active)
-				cell.setFillColor(sf::Color(60, 60, 60));
+			bool visited = m_visitedRooms[y][x];
+
+			if (!visited)
+			{
+				cell.setFillColor(sf::Color(30, 30, 30, 180)); // fog
+			}
 			else
-				cell.setFillColor(sf::Color(150, 150, 150));
+			{
+				// inactive = dark gray
+				if (!room.active)
+					cell.setFillColor(sf::Color(60, 60, 60));
+				else
+					cell.setFillColor(sf::Color(150, 150, 150));
 
-			// start room = green
-			if (room.type == MapGenerator::Room::RoomType::Start)
-				cell.setFillColor(sf::Color::Green);
+				// start room = green
+				if (room.type == MapGenerator::Room::RoomType::Start)
+					cell.setFillColor(sf::Color::Green);
 
-			// boss room = red
-			if (room.type == MapGenerator::Room::RoomType::Boss)
-				cell.setFillColor(sf::Color::Red);
+				// boss room = red
+				if (room.type == MapGenerator::Room::RoomType::Boss)
+					cell.setFillColor(sf::Color::Red);
+			}
 
 			// current room highlight = yellow
 			if (x == m_currentRoom.x && y == m_currentRoom.y)

@@ -44,6 +44,7 @@ private:
 
 	Player m_player;
 	MapGenerator m_mapGenerator;
+	std::vector<std::vector<bool>> m_visitedRooms;
 	sf::Vector2i m_currentRoom{ 0, 0 };
 	sf::Vector2f m_lastPlayerPos;
 
