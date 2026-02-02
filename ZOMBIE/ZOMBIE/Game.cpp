@@ -99,10 +99,17 @@ void Game::update(sf::Time t_deltaTime)
 		m_player.update(t_deltaTime);
 		std::cout<<oldPos.y<<std::endl;
 	}
+
+	if (m_transitionState != TransitionState::Sliding)
+	{
+		m_zombie.update(t_deltaTime, m_player.getPosition());
+	}
+
+
 	sf::FloatRect spriteBounds = m_player.getSpriteBounds();
 
 
-	// Tweakable hitbox % values
+	// hitbox % values
 	float hbWidthPercent = 0.30f;
 	float hbHeightPercent = 0.12f;
 	float yOffsetPercent = 0.28f;  // lift hitbox upward
@@ -111,13 +118,15 @@ void Game::update(sf::Time t_deltaTime)
 	float hbHeight = spriteBounds.height * hbHeightPercent;
 	float yOffset = spriteBounds.height * yOffsetPercent;
 
+	//hitbox
 	sf::FloatRect playerBox(
-		spriteBounds.left + (spriteBounds.width - hbWidth) * 0.5f,
-		spriteBounds.top + spriteBounds.height - hbHeight - yOffset,
+		spriteBounds.left + (spriteBounds.width - hbWidth) * 0.5f, 
+		spriteBounds.top + spriteBounds.height - hbHeight - yOffset, //positioned near feet
 		hbWidth,
 		hbHeight
 	);
 
+	//debugging
 	m_debugPlayerBox = playerBox;
 
 	//If this new position collides with wall undo movement
@@ -143,17 +152,19 @@ void Game::update(sf::Time t_deltaTime)
 	// Handle active sliding transition
 	if (m_transitionState == TransitionState::Sliding)
 	{
+		//how far we still need to slide
 		sf::Vector2f direction = m_slideTarget - m_slideOffset;
 		float distance = std::sqrt(direction.x * direction.x + direction.y * direction.y);
 
-		if (distance > 1.f)
+		if (distance > 1.f) //continue slideing
 		{
-			sf::Vector2f moveDir = direction / distance;
-			m_slideOffset += moveDir * m_slideSpeed * t_deltaTime.asSeconds();
+			sf::Vector2f moveDir = direction / distance;  //normalize direction
+			m_slideOffset += moveDir * m_slideSpeed * t_deltaTime.asSeconds(); //move camera
 
-			// Clamp to prevent overshoot
+			// Clamp x movement so it stops cleanly
 			if (std::abs(m_slideOffset.x - m_slideTarget.x) < 2.f)
 				m_slideOffset.x = m_slideTarget.x;
+			//clamp y movement so it stops cleanly
 			if (std::abs(m_slideOffset.y - m_slideTarget.y) < 2.f)
 				m_slideOffset.y = m_slideTarget.y;
 
@@ -161,15 +172,16 @@ void Game::update(sf::Time t_deltaTime)
 			m_cameraView.setCenter(windowW / 2.f + m_slideOffset.x,
 				windowH / 2.f + m_slideOffset.y);
 		}
-		else
+		else  //sliding is finished
 		{
-			m_slideOffset = m_slideTarget;
-			m_transitionState = TransitionState::None;
+			m_slideOffset = m_slideTarget;  //snap offset to the final position
+			m_transitionState = TransitionState::None;  //end transition
 			int oldX = m_currentRoom.x;
 			int oldY = m_currentRoom.y;
-			m_currentRoom = m_nextRoom;
+			m_currentRoom = m_nextRoom;  //switch to the next room
 
-			m_visitedRooms[m_currentRoom.y][m_currentRoom.x] = true;
+
+			m_visitedRooms[m_currentRoom.y][m_currentRoom.x] = true;  //mark room as visited
 
 			const auto& nextRoom = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
 
@@ -177,8 +189,14 @@ void Game::update(sf::Time t_deltaTime)
 			int dirY = m_currentRoom.y - oldY;
 
 			sf::Vector2f doorPos = getDoorSpawn(nextRoom, dirX, dirY);
-			m_player.setPosition(doorPos.x, doorPos.y);
+			m_player.setPosition(doorPos.x, doorPos.y); //place the player at the correct door
 
+			m_zombie.setPosition(
+				m_player.getPosition().x + 120.f,
+				m_player.getPosition().y
+			);
+
+			//read slide offst and camera
 			m_slideOffset = { 0.f, 0.f };
 			m_cameraView.setCenter(windowW / 2.f, windowH / 2.f);
 		}
@@ -189,23 +207,28 @@ void Game::update(sf::Time t_deltaTime)
 	// Detect when player walks into an exit
 	if (m_transitionState == TransitionState::None)
 	{
-		sf::Vector2i newRoom = m_currentRoom;
+		sf::Vector2i newRoom = m_currentRoom; //start with the current room
 
+		//player is at right edge and this room has a right exit
 		if (center.x > windowW - margin && current.exitRight)
 			newRoom.x++;
+		//player is at left edge and this room has a left exit
 		else if (center.x < margin && current.exitLeft)
 			newRoom.x--;
+		//player is at top edge and this room has a top exit
 		else if (center.y > windowH - margin && current.exitDown)
 			newRoom.y++;
+		//player is at top edge and this rooom has a top exit
 		else if (center.y < margin && current.exitUp)
 			newRoom.y--;
 
+		//if newRoom changed player endered the door
 		if (newRoom != m_currentRoom)
 		{
 			m_transitionState = TransitionState::Sliding;
 			m_nextRoom = newRoom;
 
-			// Calculate the world-space offset difference
+			// Calculate how far the camera needs to slide
 			sf::Vector2f direction(
 				(newRoom.x - m_currentRoom.x) * (float)windowW,
 				(newRoom.y - m_currentRoom.y) * (float)windowH
@@ -275,11 +298,13 @@ sf::Vector2f Game::getDoorSpawn(const MapGenerator::Room& room,
 
 bool Game::isCollidingWithWall(const sf::FloatRect& playerBox)
 {
+	//get the current room where the player is in
 	const auto& room = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
 
 	const int windowW = m_window.getSize().x;
 	const int windowH = m_window.getSize().y;
 
+	//calculate tile size in pixels
 	float tileW = (float)windowW / room.width;
 	float tileH = (float)windowH / room.height;
 
@@ -302,7 +327,7 @@ bool Game::isCollidingWithWall(const sf::FloatRect& playerBox)
 		{
 			if (room.tiles[y][x] == 1) // wall tile
 			{
-				return true;
+				return true; //collision detected
 			}
 		}
 	}
@@ -314,6 +339,7 @@ void Game::render()
 {
 	m_window.setView(m_cameraView);
 	m_window.clear(sf::Color(50, 50, 50));
+
 
 	const int windowW = m_window.getSize().x;
 	const int windowH = m_window.getSize().y;
@@ -355,6 +381,8 @@ void Game::render()
 				m_window.draw(tile);
 			}
 		}
+
+		m_zombie.render(m_window);
 	};
 
 	// draw current room
@@ -415,14 +443,14 @@ void Game::drawMiniMap()
 
 	sf::RectangleShape cell(sf::Vector2f(cellSize, cellSize));
 
-	// Draw rooms
+	//loop thorugh the entire minimap grid
 	for (int y = 0; y < mapHeight; ++y)
 	{
 		for (int x = 0; x < mapWidth; ++x)
 		{
-			const auto& room = m_mapGenerator.getRoom(x, y);
+			const auto& room = m_mapGenerator.getRoom(x, y); //get room data from the generator
 
-			bool visited = m_visitedRooms[y][x];
+			bool visited = m_visitedRooms[y][x]; //check if the player visited this room
 
 			if (!visited)
 			{

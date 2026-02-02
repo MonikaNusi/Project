@@ -8,6 +8,7 @@
 #include <SFML/Graphics.hpp>
 #include "Player.h"
 #include "MapGenerator.h"
+#include "Zombie.h"
 
 class Game
 {
@@ -49,6 +50,8 @@ private:
 	sf::Vector2f m_lastPlayerPos;
 
 	sf::FloatRect m_debugPlayerBox;
+
+	Zombie m_zombie;
 
 	sf::RenderWindow m_window; // main SFML window
 	bool m_exitGame{ false }; // control exiting game

@@ -32,36 +32,38 @@ const MapGenerator::Room& MapGenerator::getRoom(int x, int y) const
 // Generate the layout of rooms
 void MapGenerator::generate()
 {
-    // --- STEP 0: Reset all rooms ---
-    for (int y = 0; y < m_roomsY; ++y)
-        for (int x = 0; x < m_roomsX; ++x)
-            m_rooms[y][x] = Room();
+    // Reset all rooms
+    for (int y = 0; y < m_roomsY; ++y) //loop through each row
+        for (int x = 0; x < m_roomsX; ++x) //loop through each column
+            m_rooms[y][x] = Room(); //reset all the roooms
 
     //Build guaranteed downward path (main shaft)
     int startX = std::rand() % m_roomsX;
-    int startY = 0;
+    int startY = 0;   //alway star from top row
     int x = startX;
     int y = startY;
 
-    m_rooms[y][x].active = true;
+    m_rooms[y][x].active = true;  //starting room active
 
-    while (y < m_roomsY - 1)
+
+    //path that always reaches the bottom of the grid
+    while (y < m_roomsY - 1) 
     {
         int move = std::rand() % 3; // 0=left, 1=right, 2=down
         if (move == 0 && x > 0)
-            x--;
+            x--; 
         else if (move == 1 && x < m_roomsX - 1)
             x++;
         else
             y++;
 
-        m_rooms[y][x].active = true;
+        m_rooms[y][x].active = true; 
     }
 
     // Random side rooms
     for (int yy = 0; yy < m_roomsY; ++yy)
     {
-        for (int xx = 0; xx < m_roomsX; ++xx)
+        for (int xx = 0; xx < m_roomsX; ++xx) 
         {
             if (!m_rooms[yy][xx].active && std::rand() % 4 == 0)
                 m_rooms[yy][xx].active = true;
@@ -197,25 +199,30 @@ void MapGenerator::generateRoomLayout(Room& room)
     int width = Room::width;
     int height = Room::height;
 
+    //10x10 grid filled with floor
     room.tiles.resize(height, std::vector<int>(width, FLOOR));
 
+    //loop through grid
     for (int i = 0; i < height; i++)
     {
         for (int j = 0; j < width; j++)
         {
+            //boarder = always walls
             if (i == 0 || i == height - 1 || j == 0 || j == width - 1)
                 room.tiles[i][j] = WALL;
             else
+                //20% chance of a interior wall
                 room.tiles[i][j] = (rand() % 100 < 20) ? WALL : FLOOR;
         }
     }
 
+    //middle tile for door carving
     int mid = width / 2;
 
-    // Up
+    // if has exit Up - carve door
     if (room.exitUp)
     {
-        for (int dx = -1; dx <= 1; ++dx)
+        for (int dx = -1; dx <= 1; ++dx) //door 3 tiles wide
         {
             int j = mid + dx;
             if (j >= 0 && j < width)
@@ -259,28 +266,33 @@ void MapGenerator::generateRoomLayout(Room& room)
 
 bool MapGenerator::isPathValid(const sf::Vector2i& start, const sf::Vector2i& goal) const
 {
+    //if either the start room or the goal room is not active path is not possible
     if (!m_rooms[start.y][start.x].active || !m_rooms[goal.y][goal.x].active)
         return false;
-
+    //create a visited grid initialized to false
     std::vector<std::vector<bool>> visited(m_roomsY, std::vector<bool>(m_roomsX, false));
-    std::queue<sf::Vector2i> q;
-    q.push(start);
-    visited[start.y][start.x] = true;
-
+    std::queue<sf::Vector2i> q; //queve for BFS (rooms to check)
+    q.push(start); // start BFS from the starting room
+    visited[start.y][start.x] = true; //mark start as visited
+    //directions we can move in the grid
     const sf::Vector2i dirs[4] = { {1,0}, {-1,0}, {0,1}, {0,-1} };
-
+    //standard BFS loop
     while (!q.empty())
     {
-        auto cur = q.front();
+        auto cur = q.front();  //take next room from the queve
         q.pop();
+        //if we reached the goal room, path is valid
         if (cur == goal) return true;
 
         const Room& r = m_rooms[cur.y][cur.x];
+        //try moving in each of the 4 directions
         for (auto d : dirs)
         {
             int nx = cur.x + d.x, ny = cur.y + d.y;
+            //if the neibhor is outside the grid skip it
             if (nx < 0 || ny < 0 || nx >= m_roomsX || ny >= m_roomsY)
                 continue;
+            //skip if room is inactive or has alrady been visited
             if (!m_rooms[ny][nx].active || visited[ny][nx])
                 continue;
 
