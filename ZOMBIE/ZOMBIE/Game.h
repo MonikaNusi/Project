@@ -9,6 +9,7 @@
 #include "Player.h"
 #include "MapGenerator.h"
 #include "Zombie.h"
+#include <vector>
 
 class Game
 {
@@ -42,6 +43,7 @@ private:
 	sf::Vector2f findSafeSpawn(const MapGenerator::Room& room);
 	sf::Vector2f getDoorSpawn(const MapGenerator::Room& room,
 		int dirX, int dirY);
+	void spawnZombiesForRoom();
 
 	Player m_player;
 	MapGenerator m_mapGenerator;
@@ -51,7 +53,8 @@ private:
 
 	sf::FloatRect m_debugPlayerBox;
 
-	Zombie m_zombie;
+	std::vector<Zombie> m_zombies;
+	sf::Texture m_zombieTexture;
 
 	sf::RenderWindow m_window; // main SFML window
 	bool m_exitGame{ false }; // control exiting game

@@ -3,21 +3,17 @@
 #include <cstdlib>
 #include <iostream>
 
-Zombie::Zombie()
+Zombie::Zombie(const sf::Texture& texture)
+    : m_texture(&texture)
 {
-    if (!m_texture.loadFromFile("ASSETS\\IMAGES\\zombie.png"))
-    {
-        std::cout << "Failed to load zombie texture\n";
-    }
-    m_sprite.setTexture(m_texture);
+    m_sprite.setTexture(*m_texture);
 
     m_sprite.setOrigin(
         m_sprite.getLocalBounds().width * 0.5f,
         m_sprite.getLocalBounds().height * 0.5f
     );
 
-    m_sprite.setPosition(600.f, 500.f);
-
+ 
     m_sprite.setScale(1.f, 1.f);
 }
 
@@ -66,6 +62,11 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos)
     float ds = dt.asSeconds();
     float dist = distanceTo(playerPos);
 
+    if (m_state == State::Idle)
+    {
+        setState(State::Patrol);
+    }
+
     if (m_state != State::Attack && m_state != State::Cooldown)
     {
         if (dist <= m_attackRange)
@@ -87,23 +88,24 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos)
     if (m_state == State::Patrol)
     {
         m_patrolChangeTimer += ds;
-        if (m_patrolChangeTimer >= m_patrolChangeInterval)
+        if (m_patrolChangeTimer >= m_patrolChangeInterval || m_patrolDir == sf::Vector2f{ 0.f, 0.f })
         {
             m_patrolChangeTimer = 0.f;
 
             int rx = (std::rand() % 3) - 1;
             int ry = (std::rand() % 3) - 1;
 
-            sf::Vector2f dir((float)rx, (float)ry);
-            float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+            m_patrolDir = sf::Vector2f((float)rx, (float)ry);
+            float len = std::sqrt(m_patrolDir.x * m_patrolDir.x + m_patrolDir.y * m_patrolDir.y);
 
             if (len > 0.001f)
-            {
-                dir /= len;
-                m_velocity = dir * m_speedPatrol;
-            }
+                m_patrolDir /= len;
         }
+
+        // ALWAYS move while patrolling
+        m_velocity = m_patrolDir * m_speedPatrol;
     }
+
     else if (m_state == State::Chase)
     {
         sf::Vector2f dir = playerPos - getPosition();
@@ -142,3 +144,33 @@ void Zombie::render(sf::RenderWindow& window)
 {
     window.draw(m_sprite);
 }
+
+sf::FloatRect Zombie::getHitbox() const
+{
+    sf::FloatRect b = m_sprite.getGlobalBounds();
+
+    float w = b.width * 0.35f;
+    float h = b.height * 0.25f;
+
+    return sf::FloatRect(
+        b.left + (b.width - w) * 0.5f,
+        b.top + b.height - h,
+        w,
+        h
+    );
+}
+
+void Zombie::reset(sf::Vector2f spawnPos)
+{
+    m_sprite.setPosition(spawnPos);
+    m_velocity = { 0.f, 0.f };
+
+    m_state = State::Idle;
+    m_prevState = State::Idle;
+
+    m_attackTimer = 0.f;
+    m_cooldownTimer = 0.f;
+    m_patrolChangeTimer = 0.f;
+    m_patrolDir = { 0.f, 0.f };
+}
+

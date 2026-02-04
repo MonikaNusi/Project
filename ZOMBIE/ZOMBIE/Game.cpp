@@ -34,6 +34,11 @@ Game::Game() :
 	m_visitedRooms.resize(6, std::vector<bool>(8, false));
 	m_visitedRooms[m_currentRoom.y][m_currentRoom.x] = true; //start rooms visited
 
+	if (!m_zombieTexture.loadFromFile("ASSETS/IMAGES/zombie.png"))
+	{
+		std::cout << "Failed to load zombie texture\n";
+	}
+	spawnZombiesForRoom();
 }
 
 Game::~Game()
@@ -102,7 +107,30 @@ void Game::update(sf::Time t_deltaTime)
 
 	if (m_transitionState != TransitionState::Sliding)
 	{
-		m_zombie.update(t_deltaTime, m_player.getPosition());
+		for (auto& z : m_zombies)
+		{
+			sf::Vector2f oldPos = z.getPosition();
+			z.update(t_deltaTime, m_player.getPosition());
+
+			if (isCollidingWithWall(z.getHitbox()))
+			{
+				// Try sliding: revert one axis at a time
+				sf::Vector2f newPos = z.getPosition();
+
+				// 1) Try keep X movement, revert Y
+				z.setPosition(newPos.x, oldPos.y);
+				if (isCollidingWithWall(z.getHitbox()))
+				{
+					// 2) Try keep Y movement, revert X
+					z.setPosition(oldPos.x, newPos.y);
+					if (isCollidingWithWall(z.getHitbox()))
+					{
+						// 3) If both collide, revert fully
+						z.setPosition(oldPos.x, oldPos.y);
+					}
+				}
+			}
+		}
 	}
 
 
@@ -180,6 +208,8 @@ void Game::update(sf::Time t_deltaTime)
 			int oldY = m_currentRoom.y;
 			m_currentRoom = m_nextRoom;  //switch to the next room
 
+			spawnZombiesForRoom();
+
 
 			m_visitedRooms[m_currentRoom.y][m_currentRoom.x] = true;  //mark room as visited
 
@@ -191,10 +221,8 @@ void Game::update(sf::Time t_deltaTime)
 			sf::Vector2f doorPos = getDoorSpawn(nextRoom, dirX, dirY);
 			m_player.setPosition(doorPos.x, doorPos.y); //place the player at the correct door
 
-			m_zombie.setPosition(
-				m_player.getPosition().x + 120.f,
-				m_player.getPosition().y
-			);
+			
+
 
 			//read slide offst and camera
 			m_slideOffset = { 0.f, 0.f };
@@ -240,6 +268,46 @@ void Game::update(sf::Time t_deltaTime)
 	}
 }
 
+void Game::spawnZombiesForRoom()
+{
+	m_zombies.clear();
+
+	const auto& room = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
+
+	// Decide count based on room type
+	int count = 0;
+
+	switch (room.type)
+	{
+	case MapGenerator::Room::RoomType::Normal:
+		count = 2;
+		break;
+	case MapGenerator::Room::RoomType::Trap:
+		count = 3;
+		break;
+	case MapGenerator::Room::RoomType::Treasure:
+		count = 1;
+		break;
+	case MapGenerator::Room::RoomType::Boss:
+		count = 0; // boss later
+		break;
+	default:
+		count = 1;
+		break;
+	}
+
+	for (int i = 0; i < count; ++i)
+	{
+		Zombie z(m_zombieTexture);
+
+		sf::Vector2f spawn = findSafeSpawn(room);
+		z.reset(spawn);
+
+		m_zombies.push_back(z);
+	}
+}
+
+
 sf::Vector2f Game::findSafeSpawn(const MapGenerator::Room& room)
 {
 	const int windowW = m_window.getSize().x;
@@ -254,7 +322,10 @@ sf::Vector2f Game::findSafeSpawn(const MapGenerator::Room& room)
 
 	if (room.tiles[cy][cx] == 0) //FLOOR
 	{
-		return { cx * tileW, cy * tileH };
+		return {
+			cx * tileW + tileW * 0.5f,
+			cy * tileH + tileH * 0.5f
+		};
 	}
 
 	//Otherwise search for ANY nearby floor tile
@@ -264,7 +335,10 @@ sf::Vector2f Game::findSafeSpawn(const MapGenerator::Room& room)
 		{
 			if (room.tiles[y][x] == 0)
 			{
-				return { x * tileW, y * tileH };
+				return {
+					x * tileW + tileW * 0.5f,
+					y * tileH + tileH * 0.5f
+				};
 			}
 		}
 	}
@@ -382,7 +456,7 @@ void Game::render()
 			}
 		}
 
-		m_zombie.render(m_window);
+
 	};
 
 	// draw current room
@@ -400,14 +474,30 @@ void Game::render()
 
 	//m_mapGenerator.render(m_window);
 	m_player.render(m_window);
-		
+
+	for (auto& z : m_zombies)
+	{
+		z.render(m_window);
+
+		// optional debug
+		sf::RectangleShape hb;
+		auto zb = z.getHitbox();
+		hb.setPosition(zb.left, zb.top);
+		hb.setSize({ zb.width, zb.height });
+		hb.setFillColor(sf::Color(0, 255, 0, 120));
+		m_window.draw(hb);
+	}
+			
 	sf::RectangleShape hb;
 	hb.setPosition(m_debugPlayerBox.left, m_debugPlayerBox.top);
 	hb.setSize({ m_debugPlayerBox.width, m_debugPlayerBox.height });
 	hb.setFillColor(sf::Color(255, 0, 0, 120));
 	m_window.draw(hb);
 
+
 	m_window.setView(m_window.getDefaultView());
+
+
 
 	drawMiniMap();
 
