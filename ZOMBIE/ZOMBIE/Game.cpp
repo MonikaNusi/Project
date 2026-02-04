@@ -6,6 +6,8 @@
 #include "Game.h"
 #include <iostream>
 
+std::string zombieStateToString(Zombie::State state);
+
 
 Game::Game() :
 	m_window{ sf::VideoMode{ 1200U, 1000U, 32U }, "SFML Game" },
@@ -39,6 +41,12 @@ Game::Game() :
 		std::cout << "Failed to load zombie texture\n";
 	}
 	spawnZombiesForRoom();
+
+
+	if (!m_debugFont.loadFromFile("ASSETS/FONTS/ariblk.ttf"))
+	{
+		std::cout << "Failed to load debug font\n";
+	}
 }
 
 Game::~Game()
@@ -479,6 +487,18 @@ void Game::render()
 	{
 		z.render(m_window);
 
+		sf::Text stateText;
+		stateText.setFont(m_debugFont);
+		stateText.setCharacterSize(14);
+		stateText.setFillColor(sf::Color::White);
+
+		stateText.setString(zombieStateToString(z.getState()));
+
+		sf::Vector2f pos = z.getPosition();
+		stateText.setPosition(pos.x - 20.f, pos.y - 40.f);
+
+		m_window.draw(stateText);
+
 		// optional debug
 		sf::RectangleShape hb;
 		auto zb = z.getHitbox();
@@ -573,5 +593,19 @@ void Game::drawMiniMap()
 
 			m_window.draw(cell);
 		}
+	}
+
+}
+
+std::string zombieStateToString(Zombie::State state)
+{
+	switch (state)
+	{
+	case Zombie::State::Idle:     return "Idle";
+	case Zombie::State::Patrol:   return "Patrol";
+	case Zombie::State::Chase:    return "Chase";
+	case Zombie::State::Attack:   return "Attack";
+	case Zombie::State::Cooldown: return "Cooldown";
+	default:                      return "Unknown";
 	}
 }

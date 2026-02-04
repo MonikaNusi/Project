@@ -34,6 +34,8 @@ private:
 	sf::Vector2i m_nextRoom{ 0, 0 };
 	sf::View m_cameraView;
 
+	sf::Font m_debugFont;
+
 	void processEvents();
 	void processKeys(sf::Event t_event);
 	void update(sf::Time t_deltaTime);

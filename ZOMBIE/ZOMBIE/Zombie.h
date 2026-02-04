@@ -21,6 +21,9 @@ public:
     sf::Vector2f getPosition() const;
     sf::FloatRect getBounds() const;
 
+    Zombie::State getState() const { return m_state; }
+
+
     void update(sf::Time dt, sf::Vector2f playerPos);
     void render(sf::RenderWindow& window);
 
