@@ -14,6 +14,8 @@ public:
 
 	sf::FloatRect getSpriteBounds() const { return m_sprite.getGlobalBounds(); }
 
+	sf::Vector2i getTilePos(float tileW, float tileH) const;
+
 private:
 	sf::Sprite m_sprite;
 	sf::Texture m_texture;

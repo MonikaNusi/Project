@@ -6,6 +6,7 @@
 #include "Game.h"
 #include <iostream>
 
+
 std::string zombieStateToString(Zombie::State state);
 
 
@@ -118,7 +119,19 @@ void Game::update(sf::Time t_deltaTime)
 		for (auto& z : m_zombies)
 		{
 			sf::Vector2f oldPos = z.getPosition();
-			z.update(t_deltaTime, m_player.getPosition());
+
+			const auto& room = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
+
+			float tileW = (float)m_window.getSize().x / room.width;
+			float tileH = (float)m_window.getSize().y / room.height;
+
+			z.update(
+				t_deltaTime,
+				m_player.getPosition(),
+				room.tiles,
+				tileW,
+				tileH
+			);
 
 			if (isCollidingWithWall(z.getHitbox()))
 			{
@@ -188,6 +201,7 @@ void Game::update(sf::Time t_deltaTime)
 	// Handle active sliding transition
 	if (m_transitionState == TransitionState::Sliding)
 	{
+
 		//how far we still need to slide
 		sf::Vector2f direction = m_slideTarget - m_slideOffset;
 		float distance = std::sqrt(direction.x * direction.x + direction.y * direction.y);
@@ -215,6 +229,9 @@ void Game::update(sf::Time t_deltaTime)
 			int oldX = m_currentRoom.x;
 			int oldY = m_currentRoom.y;
 			m_currentRoom = m_nextRoom;  //switch to the next room
+
+			for (auto& z : m_zombies)
+				z.setFrozen(true);
 
 			spawnZombiesForRoom();
 

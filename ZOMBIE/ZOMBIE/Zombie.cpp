@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include "Pathfinding.h"
 
 Zombie::Zombie(const sf::Texture& texture)
     : m_texture(&texture)
@@ -38,6 +39,11 @@ float Zombie::distanceTo(sf::Vector2f p) const
     return std::sqrt(d.x * d.x + d.y * d.y);
 }
 
+void Zombie::setFrozen(bool frozen)
+{
+    m_frozen = frozen;
+}
+
 void Zombie::setState(State newState)
 {
     if (newState == m_state) return;
@@ -57,8 +63,13 @@ void Zombie::setState(State newState)
     }
 }
 
-void Zombie::update(sf::Time dt, sf::Vector2f playerPos)
+void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::vector<int>>& tiles,
+    float tileW,
+    float tileH)
 {
+    if (m_frozen)
+        return;
+
     float ds = dt.asSeconds();
     float dist = distanceTo(playerPos);
 
@@ -67,11 +78,36 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos)
         setState(State::Patrol);
     }
 
+    if (m_state == State::Chase)
+    {
+        sf::Vector2i zombieTile(
+            static_cast<int>(getPosition().x / tileW),
+            static_cast<int>(getPosition().y / tileH)
+        );
+
+        sf::Vector2i playerTile(
+            static_cast<int>(playerPos.x / tileW),
+            static_cast<int>(playerPos.y / tileH)
+        );
+
+        auto path = findPath(tiles, zombieTile, playerTile);
+
+        if (path.size() > 1)
+        {
+            sf::Vector2i next = path[1];
+
+            m_moveTarget = {
+                next.x * tileW + tileW * 0.5f,
+                next.y * tileH + tileH * 0.5f
+            };
+        }
+    }
+
     if (m_state != State::Attack && m_state != State::Cooldown)
     {
         if (dist <= m_attackRange)
         {
-            setState(State::Attack);
+            setState(State::Attack); 
         }
         else if (dist <= m_chaseRange)
         {
@@ -102,18 +138,29 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos)
                 m_patrolDir /= len;
         }
 
-        // ALWAYS move while patrolling
+
         m_velocity = m_patrolDir * m_speedPatrol;
     }
 
     else if (m_state == State::Chase)
     {
-        sf::Vector2f dir = playerPos - getPosition();
+        if (dist <= m_attackRange)
+        {
+            setState(State::Attack);
+            return;
+        }
+
+        sf::Vector2f dir = m_moveTarget - getPosition();
         float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
-        if (len > 0.001f)
+
+        if (len > 2.f)
         {
             dir /= len;
             m_velocity = dir * m_speedChase;
+        }
+        else
+        {
+            m_moveTarget = playerPos;
         }
     }
     else if (m_state == State::Attack)
@@ -138,6 +185,7 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos)
     }
 
     m_sprite.move(m_velocity * ds);
+
 }
 
 void Zombie::render(sf::RenderWindow& window)

@@ -24,12 +24,20 @@ public:
     Zombie::State getState() const { return m_state; }
 
 
-    void update(sf::Time dt, sf::Vector2f playerPos);
+    void update(
+        sf::Time dt,
+        sf::Vector2f playerPos,
+        const std::vector<std::vector<int>>& tiles,
+        float tileW,
+        float tileH
+    );
     void render(sf::RenderWindow& window);
 
     sf::FloatRect getHitbox() const;
 
     void reset(sf::Vector2f spawnPos);
+
+    void setFrozen(bool frozen);
 
 private:
     void setState(State newState);
@@ -60,5 +68,10 @@ private:
 
     float m_cooldownTimer{ 0.f };
     float m_cooldownDuration{ 0.5f };
+
+    bool m_frozen = false;
+
+    sf::Vector2f m_moveTarget;
+
 };
 

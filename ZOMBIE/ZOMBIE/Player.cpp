@@ -83,4 +83,13 @@ void Player::animate(sf::Time dt)
 	m_sprite.setTextureRect(sf::IntRect(m_currentFrame * m_frameSize.x, m_currentRow * m_frameSize.y, m_frameSize.x, m_frameSize.y));
 }
 
+sf::Vector2i Player::getTilePos(float tileW, float tileH) const
+{
+	sf::Vector2f pos = m_sprite.getPosition();
+	return {
+		static_cast<int>(pos.x / tileW),
+		static_cast<int>(pos.y / tileH)
+	};
+}
+
 
