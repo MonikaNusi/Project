@@ -16,12 +16,24 @@ public:
 
 	sf::Vector2i getTilePos(float tileW, float tileH) const;
 
+	bool canShoot() const;
+	void shoot();
+
+	void addAmmo(int amount);
+	int getAmmo() const { return m_ammo; }
+
 private:
 	sf::Sprite m_sprite;
 	sf::Texture m_texture;
 
 	sf::Vector2f m_velocity{ 0.f,0.f };
 	float m_speed{ 200.f };
+
+	float m_fireCooldown = 0.f;
+	float m_fireRate = 0.25f;
+
+	int m_ammo = 20; 
+	int m_maxAmmo = 50;
 
 
 	int m_currentFrame{ 0 };

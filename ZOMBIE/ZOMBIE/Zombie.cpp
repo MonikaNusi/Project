@@ -16,6 +16,8 @@ Zombie::Zombie(const sf::Texture& texture)
 
  
     m_sprite.setScale(1.f, 1.f);
+
+    m_health = 100;
 }
 
 void Zombie::setPosition(float x, float y)

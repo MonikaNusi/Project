@@ -39,6 +39,9 @@ private:
 
 	std::vector<Bullet> m_bullets;
 
+	sf::Font m_uiFont;
+	sf::Text m_ammoText;
+
 	void processEvents();
 	void processKeys(sf::Event t_event);
 	void update(sf::Time t_deltaTime);

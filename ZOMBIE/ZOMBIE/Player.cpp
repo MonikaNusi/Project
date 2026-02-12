@@ -58,6 +58,9 @@ void Player::update(sf::Time dt)
 		m_currentFrame = 0;
 		m_sprite.setTextureRect(sf::IntRect(0, m_currentRow * m_frameSize.y, m_frameSize.x, m_frameSize.y));
 	}
+
+	if (m_fireCooldown > 0.f)
+		m_fireCooldown -= dt.asSeconds();
 }
 
 sf::Vector2f Player::getSize() const
@@ -90,6 +93,21 @@ sf::Vector2i Player::getTilePos(float tileW, float tileH) const
 		static_cast<int>(pos.x / tileW),
 		static_cast<int>(pos.y / tileH)
 	};
+}
+
+bool Player::canShoot() const 
+{
+	return m_fireCooldown <= 0.f && m_ammo > 0;
+}
+void Player::shoot() 
+{
+	m_fireCooldown = m_fireRate;
+	m_ammo--; 
+}
+
+void Player::addAmmo(int amount)
+{
+	m_ammo = std::min(m_ammo + amount, m_maxAmmo);
 }
 
 

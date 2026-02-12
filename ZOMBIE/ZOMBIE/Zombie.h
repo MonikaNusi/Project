@@ -74,7 +74,7 @@ private:
 
     bool m_frozen = false;
 
-    int m_health = 50;
+    int m_health = 100;
 
     sf::Vector2f m_moveTarget;
 

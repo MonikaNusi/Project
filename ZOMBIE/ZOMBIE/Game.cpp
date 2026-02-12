@@ -49,6 +49,12 @@ Game::Game() :
 	{
 		std::cout << "Failed to load debug font\n";
 	}
+
+	m_uiFont.loadFromFile("ASSETS/FONTS/ariblk.ttf");
+	m_ammoText.setFont(m_uiFont); 
+	m_ammoText.setCharacterSize(24);
+	m_ammoText.setFillColor(sf::Color::White);
+	m_ammoText.setPosition(950.f, 20.f);
 }
 
 Game::~Game()
@@ -91,16 +97,21 @@ void Game::processEvents()
 		if (newEvent.type == sf::Event::MouseButtonPressed &&
 			newEvent.mouseButton.button == sf::Mouse::Left)
 		{
-			// shoot 
-			sf::Vector2f playerPos = m_player.getPosition();
-			sf::Vector2f playerSize = m_player.getSize();
-			sf::Vector2f playerCenter = playerPos + playerSize / 2.f;
+			if (m_player.canShoot())
+			{
+				// shoot 
+				sf::Vector2f playerPos = m_player.getPosition();
+				sf::Vector2f playerSize = m_player.getSize();
+				sf::Vector2f playerCenter = playerPos + playerSize / 2.f;
 
-			// mouse position
-			sf::Vector2i mousePixel = sf::Mouse::getPosition(m_window);
-			sf::Vector2f mouseWorld = m_window.mapPixelToCoords(mousePixel, m_cameraView);
-			sf::Vector2f dir = mouseWorld - playerCenter;
-			m_bullets.emplace_back(playerCenter, dir);
+				// mouse position
+				sf::Vector2i mousePixel = sf::Mouse::getPosition(m_window);
+				sf::Vector2f mouseWorld = m_window.mapPixelToCoords(mousePixel, m_cameraView);
+				sf::Vector2f dir = mouseWorld - playerCenter;
+
+				m_player.shoot(); // reduces ammo, sets cooldown
+				m_bullets.emplace_back(playerCenter, dir);
+			}
 		}
 	}
 }
@@ -119,6 +130,8 @@ void Game::update(sf::Time t_deltaTime)
 	{
 		m_window.close();
 	}
+
+	m_ammoText.setString("Ammo: " + std::to_string(m_player.getAmmo()));
 
 	sf::Vector2f oldPos = m_player.getPosition();
 
@@ -571,6 +584,7 @@ void Game::render()
 	{
 		b.render(m_window);
 	}
+
 			
 	sf::RectangleShape hb;
 	hb.setPosition(m_debugPlayerBox.left, m_debugPlayerBox.top);
@@ -581,7 +595,7 @@ void Game::render()
 
 	m_window.setView(m_window.getDefaultView());
 
-
+	m_window.draw(m_ammoText);
 
 	drawMiniMap();
 
