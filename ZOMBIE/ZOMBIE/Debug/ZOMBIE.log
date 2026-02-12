@@ -1,20 +1,20 @@
 ﻿  Game.cpp
-C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\Game.cpp(466,15): warning C4244: 'initializing': conversion from 'T' to 'int', possible loss of data
+C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\Game.cpp(497,15): warning C4244: 'initializing': conversion from 'T' to 'int', possible loss of data
           with
           [
               T=float
           ]
-C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\Game.cpp(467,16): warning C4244: 'initializing': conversion from 'T' to 'int', possible loss of data
+C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\Game.cpp(498,16): warning C4244: 'initializing': conversion from 'T' to 'int', possible loss of data
           with
           [
               T=float
           ]
-C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\Game.cpp(468,14): warning C4244: 'initializing': conversion from 'T' to 'int', possible loss of data
+C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\Game.cpp(499,14): warning C4244: 'initializing': conversion from 'T' to 'int', possible loss of data
           with
           [
               T=float
           ]
-C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\Game.cpp(469,17): warning C4244: 'initializing': conversion from 'T' to 'int', possible loss of data
+C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\Game.cpp(500,17): warning C4244: 'initializing': conversion from 'T' to 'int', possible loss of data
           with
           [
               T=float

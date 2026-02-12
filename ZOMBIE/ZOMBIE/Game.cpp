@@ -43,7 +43,7 @@ Game::Game() :
 		std::cout << "Failed to load zombie texture\n";
 	}
 	spawnZombiesForRoom();
-
+	
 
 	if (!m_debugFont.loadFromFile("ASSETS/FONTS/ariblk.ttf"))
 	{
@@ -55,6 +55,15 @@ Game::Game() :
 	m_ammoText.setCharacterSize(24);
 	m_ammoText.setFillColor(sf::Color::White);
 	m_ammoText.setPosition(950.f, 20.f);
+
+	m_healthBarBack.setSize({ 200.f, 20.f });
+	m_healthBarBack.setFillColor(sf::Color(80, 0, 0));
+	m_healthBarBack.setPosition(700.f, 20.f);
+
+	m_healthBarFront.setSize({ 200.f, 20.f });
+	m_healthBarFront.setFillColor(sf::Color(200, 0, 0));
+	m_healthBarFront.setPosition(700.f, 20.f);
+
 }
 
 Game::~Game()
@@ -161,6 +170,24 @@ void Game::update(sf::Time t_deltaTime)
 				tileH
 			);
 
+			// Zombie attack → damage player
+			if (z.getState() == Zombie::State::Attack)
+			{
+				sf::FloatRect playerHitbox = m_debugPlayerBox;
+				if (z.getHitbox().intersects(playerHitbox))
+				{
+					m_player.takeDamage(10);   
+				}
+			}
+
+			if (m_player.getHealth() <= 0)
+			{
+				std::cout << "GAME OVER\n";
+				m_window.close();
+			}
+
+
+
 			if (isCollidingWithWall(z.getHitbox()))
 			{
 				// Try sliding: revert one axis at a time
@@ -184,6 +211,10 @@ void Game::update(sf::Time t_deltaTime)
 
 	m_zombies.erase(std::remove_if(m_zombies.begin(), m_zombies.end(),
 		[](const Zombie& z) { return z.isDead(); }), m_zombies.end());
+
+	float healthPercent = (float)m_player.getHealth() / m_player.getMaxHealth();
+	m_healthBarFront.setSize({ 200.f * healthPercent, 20.f });
+
 
 
 	sf::FloatRect spriteBounds = m_player.getSpriteBounds();
@@ -596,6 +627,11 @@ void Game::render()
 	m_window.setView(m_window.getDefaultView());
 
 	m_window.draw(m_ammoText);
+
+	m_window.draw(m_healthBarBack);
+	m_window.draw(m_healthBarFront);
+	m_window.draw(m_ammoText);
+
 
 	drawMiniMap();
 

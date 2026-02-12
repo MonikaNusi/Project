@@ -73,6 +73,15 @@ void Player::render(sf::RenderWindow& window)
 	window.draw(m_sprite);
 }
 
+void Player::takeDamage(int dmg)
+{
+	m_health -= dmg;
+	if (m_health < 0)
+	{
+		m_health = 0;
+	}
+}
+
 void Player::animate(sf::Time dt)
 {
 	m_timeSinceLastFrame += dt.asSeconds();

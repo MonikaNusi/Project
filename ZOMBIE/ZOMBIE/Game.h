@@ -42,6 +42,9 @@ private:
 	sf::Font m_uiFont;
 	sf::Text m_ammoText;
 
+	sf::RectangleShape m_healthBarBack;
+	sf::RectangleShape m_healthBarFront;
+
 	void processEvents();
 	void processKeys(sf::Event t_event);
 	void update(sf::Time t_deltaTime);

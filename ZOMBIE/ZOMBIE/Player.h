@@ -22,6 +22,10 @@ public:
 	void addAmmo(int amount);
 	int getAmmo() const { return m_ammo; }
 
+	void takeDamage(int dmg);
+	int getHealth() const { return m_health; }
+	int getMaxHealth() const { return m_maxHealth; }
+
 private:
 	sf::Sprite m_sprite;
 	sf::Texture m_texture;
@@ -35,6 +39,8 @@ private:
 	int m_ammo = 20; 
 	int m_maxAmmo = 50;
 
+	int m_health = 100;
+	int m_maxHealth = 100;
 
 	int m_currentFrame{ 0 };
 	const int m_frameCount{ 8 };
