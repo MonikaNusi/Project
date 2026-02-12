@@ -39,6 +39,9 @@ public:
 
     void setFrozen(bool frozen);
 
+    void takeDamage(int dmg); 
+    bool isDead() const { return m_health <= 0; }
+
 private:
     void setState(State newState);
     float distanceTo(sf::Vector2f p) const;
@@ -70,6 +73,8 @@ private:
     float m_cooldownDuration{ 0.5f };
 
     bool m_frozen = false;
+
+    int m_health = 50;
 
     sf::Vector2f m_moveTarget;
 

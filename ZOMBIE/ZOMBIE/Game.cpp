@@ -5,6 +5,7 @@
 
 #include "Game.h"
 #include <iostream>
+#include <algorithm>
 
 
 std::string zombieStateToString(Zombie::State state);
@@ -87,6 +88,20 @@ void Game::processEvents()
 		{
 			processKeys(newEvent);
 		}
+		if (newEvent.type == sf::Event::MouseButtonPressed &&
+			newEvent.mouseButton.button == sf::Mouse::Left)
+		{
+			// shoot 
+			sf::Vector2f playerPos = m_player.getPosition();
+			sf::Vector2f playerSize = m_player.getSize();
+			sf::Vector2f playerCenter = playerPos + playerSize / 2.f;
+
+			// mouse position
+			sf::Vector2i mousePixel = sf::Mouse::getPosition(m_window);
+			sf::Vector2f mouseWorld = m_window.mapPixelToCoords(mousePixel, m_cameraView);
+			sf::Vector2f dir = mouseWorld - playerCenter;
+			m_bullets.emplace_back(playerCenter, dir);
+		}
 	}
 }
 
@@ -154,6 +169,9 @@ void Game::update(sf::Time t_deltaTime)
 		}
 	}
 
+	m_zombies.erase(std::remove_if(m_zombies.begin(), m_zombies.end(),
+		[](const Zombie& z) { return z.isDead(); }), m_zombies.end());
+
 
 	sf::FloatRect spriteBounds = m_player.getSpriteBounds();
 
@@ -188,6 +206,30 @@ void Game::update(sf::Time t_deltaTime)
 	}
 
 
+	for (auto& b : m_bullets) 
+	{
+		b.update(t_deltaTime);
+	}
+
+	m_bullets.erase(std::remove_if(m_bullets.begin(), m_bullets.end(),
+		[](const Bullet& b) { return !b.isAlive(); }), m_bullets.end());
+
+	for (auto& b : m_bullets) 
+	{
+		if (!b.isAlive()) continue;
+
+		for (auto& z : m_zombies) 
+		{
+			if (z.isDead()) continue;
+
+			if (b.getBounds().intersects(z.getHitbox())) 
+			{
+				z.takeDamage(25);
+				b.kill();
+			}
+		}
+
+	}
 
 	sf::Vector2f pos = m_player.getPosition();
 	sf::Vector2f size = m_player.getSize();
@@ -523,6 +565,11 @@ void Game::render()
 		hb.setSize({ zb.width, zb.height });
 		hb.setFillColor(sf::Color(0, 255, 0, 120));
 		m_window.draw(hb);
+	}
+
+	for (const auto& b : m_bullets)
+	{
+		b.render(m_window);
 	}
 			
 	sf::RectangleShape hb;

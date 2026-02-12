@@ -1,2 +1,26 @@
-﻿  Zombie.cpp
+﻿  Bullet.cpp
+  Game.cpp
+C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\Game.cpp(453,15): warning C4244: 'initializing': conversion from 'T' to 'int', possible loss of data
+          with
+          [
+              T=float
+          ]
+C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\Game.cpp(454,16): warning C4244: 'initializing': conversion from 'T' to 'int', possible loss of data
+          with
+          [
+              T=float
+          ]
+C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\Game.cpp(455,14): warning C4244: 'initializing': conversion from 'T' to 'int', possible loss of data
+          with
+          [
+              T=float
+          ]
+C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\Game.cpp(456,17): warning C4244: 'initializing': conversion from 'T' to 'int', possible loss of data
+          with
+          [
+              T=float
+          ]
+  main.cpp
+  Zombie.cpp
+  Generating Code...
   ZOMBIE.vcxproj -> C:\Users\Mony\Desktop\project\Project\ZOMBIE\Debug\ZOMBIE.exe

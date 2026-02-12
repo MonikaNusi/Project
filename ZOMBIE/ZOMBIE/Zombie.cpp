@@ -1,4 +1,4 @@
-#include "Zombie.h"
+﻿#include "Zombie.h"
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -42,6 +42,11 @@ float Zombie::distanceTo(sf::Vector2f p) const
 void Zombie::setFrozen(bool frozen)
 {
     m_frozen = frozen;
+}
+
+void Zombie::takeDamage(int dmg)
+{
+    m_health -= dmg;
 }
 
 void Zombie::setState(State newState)

@@ -10,6 +10,7 @@
 #include "MapGenerator.h"
 #include "Zombie.h"
 #include <vector>
+#include "Bullet.h"
 
 class Game
 {
@@ -35,6 +36,8 @@ private:
 	sf::View m_cameraView;
 
 	sf::Font m_debugFont;
+
+	std::vector<Bullet> m_bullets;
 
 	void processEvents();
 	void processKeys(sf::Event t_event);
