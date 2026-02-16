@@ -14,10 +14,13 @@ Zombie::Zombie(const sf::Texture& texture)
         m_sprite.getLocalBounds().height * 0.5f
     );
 
- 
+
     m_sprite.setScale(1.f, 1.f);
 
     m_health = 100;
+
+    m_cooldownTimer = m_cooldownDuration;
+    m_hasDealtDamageThisAttack = false;
 }
 
 void Zombie::setPosition(float x, float y)
@@ -63,12 +66,12 @@ void Zombie::setState(State newState)
     if (m_state == State::Attack)
     {
         m_attackTimer = 0.f;
+        m_hasDealtDamageThisAttack = false;
     }
-    if (m_state == State::Cooldown)
-    {
-        m_cooldownTimer = 0.f;
-    }
+
+
 }
+
 
 void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::vector<int>>& tiles,
     float tileW,
@@ -80,12 +83,23 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
     float ds = dt.asSeconds();
     float dist = distanceTo(playerPos);
 
+
+    float attackEnter = m_attackRange;
+    float attackExit  = m_attackRange * 0.9f;
+   
+
+    if (m_state != State::Attack)
+    {
+        if (m_cooldownTimer < m_cooldownDuration)
+            m_cooldownTimer += ds;
+    }
+
     if (m_state == State::Idle)
     {
         setState(State::Patrol);
     }
 
-    if (m_state == State::Chase)
+    if (m_state == State::Chase || m_state == State::Cooldown)
     {
         sf::Vector2i zombieTile(
             static_cast<int>(getPosition().x / tileW),
@@ -101,6 +115,8 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
 
         if (path.size() > 1)
         {
+
+
             sf::Vector2i next = path[1];
 
             m_moveTarget = {
@@ -108,13 +124,18 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
                 next.y * tileH + tileH * 0.5f
             };
         }
+        else
+        {
+           
+            m_moveTarget = playerPos;
+        }
     }
 
-    if (m_state != State::Attack && m_state != State::Cooldown)
+    if (m_state != State::Attack)
     {
-        if (dist <= m_attackRange)
+        if (dist <= attackEnter && m_cooldownTimer >= m_cooldownDuration)
         {
-            setState(State::Attack); 
+            setState(State::Attack);
         }
         else if (dist <= m_chaseRange)
         {
@@ -151,7 +172,8 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
 
     else if (m_state == State::Chase)
     {
-        if (dist <= m_attackRange)
+
+        if (dist <= attackEnter && m_cooldownTimer >= m_cooldownDuration)
         {
             setState(State::Attack);
             return;
@@ -174,18 +196,43 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
     {
         m_attackTimer += ds;
 
+        sf::Vector2f dir = playerPos - getPosition();
+        float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+        if (len > 0.001f)
+        {
+            dir /= len;
+            m_velocity = dir * (m_speedChase * 1.2f);
+        }
+        else
+        {
+            m_velocity = { 0.f, 0.f };
+        }
+
         if (m_attackTimer >= m_attackDuration)
         {
-            setState(State::Cooldown);
+            m_cooldownTimer = 0.f;
+            setState(State::Chase);
         }
     }
     else if (m_state == State::Cooldown)
     {
         m_cooldownTimer += ds;
 
+        sf::Vector2f dir = m_moveTarget - getPosition();
+        float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+        if (len > 2.f)
+        {
+            dir /= len;
+            m_velocity = dir * (m_speedChase * 0.6f); // slower during cooldown
+        }
+        else
+        {
+            m_moveTarget = playerPos;
+        }
+
         if (m_cooldownTimer >= m_cooldownDuration)
         {
-            if (dist <= m_attackRange) setState(State::Attack);
+            if (dist <= attackExit && m_cooldownTimer >= m_cooldownDuration) setState(State::Attack);
             else if (dist <= m_chaseRange) setState(State::Chase);
             else setState(State::Patrol);
         }
@@ -215,6 +262,20 @@ sf::FloatRect Zombie::getHitbox() const
     );
 }
 
+int Zombie::tryDealDamage(const sf::FloatRect& playerHitbox)
+{
+    if (m_state == State::Attack && !m_hasDealtDamageThisAttack)
+    {
+        if (getHitbox().intersects(playerHitbox))
+        {
+            m_hasDealtDamageThisAttack = true;
+            return 10;
+        }
+    }
+    return 0;
+}
+
+
 void Zombie::reset(sf::Vector2f spawnPos)
 {
     m_sprite.setPosition(spawnPos);
@@ -224,7 +285,7 @@ void Zombie::reset(sf::Vector2f spawnPos)
     m_prevState = State::Idle;
 
     m_attackTimer = 0.f;
-    m_cooldownTimer = 0.f;
+    m_cooldownTimer = m_cooldownDuration;
     m_patrolChangeTimer = 0.f;
     m_patrolDir = { 0.f, 0.f };
 }

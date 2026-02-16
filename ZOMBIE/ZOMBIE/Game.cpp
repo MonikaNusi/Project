@@ -144,6 +144,8 @@ void Game::update(sf::Time t_deltaTime)
 
 	sf::Vector2f oldPos = m_player.getPosition();
 
+	sf::Vector2f playerCenter = m_player.getPosition() + m_player.getSize() / 2.f;
+
 	if (m_transitionState != TransitionState::Sliding)
 	{
 		m_player.hadnleInput();
@@ -164,19 +166,20 @@ void Game::update(sf::Time t_deltaTime)
 
 			z.update(
 				t_deltaTime,
-				m_player.getPosition(),
+				playerCenter,  
 				room.tiles,
 				tileW,
 				tileH
 			);
 
-			// Zombie attack → damage player
+			// Zombie attack
 			if (z.getState() == Zombie::State::Attack)
 			{
 				sf::FloatRect playerHitbox = m_debugPlayerBox;
-				if (z.getHitbox().intersects(playerHitbox))
+				int dmg = z.tryDealDamage(playerHitbox);
+				if (dmg > 0)
 				{
-					m_player.takeDamage(10);   
+					m_player.takeDamage(dmg);
 				}
 			}
 
@@ -190,18 +193,18 @@ void Game::update(sf::Time t_deltaTime)
 
 			if (isCollidingWithWall(z.getHitbox()))
 			{
-				// Try sliding: revert one axis at a time
+
 				sf::Vector2f newPos = z.getPosition();
 
-				// 1) Try keep X movement, revert Y
+	
 				z.setPosition(newPos.x, oldPos.y);
 				if (isCollidingWithWall(z.getHitbox()))
 				{
-					// 2) Try keep Y movement, revert X
+				
 					z.setPosition(oldPos.x, newPos.y);
 					if (isCollidingWithWall(z.getHitbox()))
 					{
-						// 3) If both collide, revert fully
+
 						z.setPosition(oldPos.x, oldPos.y);
 					}
 				}
@@ -220,7 +223,7 @@ void Game::update(sf::Time t_deltaTime)
 	sf::FloatRect spriteBounds = m_player.getSpriteBounds();
 
 
-	// hitbox % values
+
 	float hbWidthPercent = 0.30f;
 	float hbHeightPercent = 0.12f;
 	float yOffsetPercent = 0.28f;  // lift hitbox upward

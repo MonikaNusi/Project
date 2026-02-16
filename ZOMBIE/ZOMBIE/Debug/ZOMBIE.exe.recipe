@@ -2,15 +2,15 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>C:\Users\Mony\Desktop\project\Project\ZOMBIE\Debug\ZOMBIE.exe</FullPath>
+      <FullPath>C:\Users\Mony\Desktop\project1\Project\ZOMBIE\Debug\ZOMBIE.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles>
     <ContentFile>
-      <FullPath>C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\ASSETS\FONTS\ariblk.ttf</FullPath>
+      <FullPath>C:\Users\Mony\Desktop\project1\Project\ZOMBIE\ZOMBIE\ASSETS\FONTS\ariblk.ttf</FullPath>
     </ContentFile>
     <ContentFile>
-      <FullPath>C:\Users\Mony\Desktop\project\Project\ZOMBIE\ZOMBIE\ASSETS\IMAGES\SFML-LOGO.png</FullPath>
+      <FullPath>C:\Users\Mony\Desktop\project1\Project\ZOMBIE\ZOMBIE\ASSETS\IMAGES\SFML-LOGO.png</FullPath>
     </ContentFile>
   </ContentFiles>
   <SatelliteDlls />

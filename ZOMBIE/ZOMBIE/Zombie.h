@@ -42,6 +42,8 @@ public:
     void takeDamage(int dmg); 
     bool isDead() const { return m_health <= 0; }
 
+    int tryDealDamage(const sf::FloatRect& playerHitbox);
+
 private:
     void setState(State newState);
     float distanceTo(sf::Vector2f p) const;
@@ -77,6 +79,8 @@ private:
     int m_health = 100;
 
     sf::Vector2f m_moveTarget;
+
+    bool m_hasDealtDamageThisAttack{ false };
 
 };
 
