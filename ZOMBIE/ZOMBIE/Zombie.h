@@ -93,7 +93,8 @@ private:
 
     bool m_frozen = false;
 
-    int m_health = 100;
+    int m_maxHealth{ 100 };
+    int m_health{ 100 };
 
     sf::Vector2f m_moveTarget;
 
@@ -118,6 +119,11 @@ private:
     sf::Texture m_attackDownTex;
     sf::Texture m_attackUpTex;
     sf::Texture m_attackSideTex;
+
+    sf::RectangleShape m_healthBarBack;
+    sf::RectangleShape m_healthBarFront;
+    float m_healthBarHeight{ 6.f };
+    float m_healthBarOffset{ 6.f };
 
 };
 

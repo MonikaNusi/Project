@@ -15,7 +15,9 @@ Zombie::Zombie(const sf::Texture& texture)
 
     m_sprite.setScale(m_baseScale, m_baseScale);
 
-    m_health = 100;
+    m_health = m_maxHealth;
+
+    //m_health = 100;
 
     m_cooldownTimer = m_cooldownDuration;
     m_hasDealtDamageThisAttack = false;
@@ -33,6 +35,13 @@ Zombie::Zombie(const sf::Texture& texture)
     m_attackUpTex.setSmooth(false);
     m_attackSideTex.loadFromFile("ASSETS/IMAGES/ZombieSideAttack.png");
     m_attackSideTex.setSmooth(false);
+
+
+    m_healthBarBack.setFillColor(sf::Color(80, 0, 0));
+    m_healthBarBack.setOutlineThickness(1.f);
+    m_healthBarBack.setOutlineColor(sf::Color::Black);
+
+    m_healthBarFront.setFillColor(sf::Color(200, 0, 0));
 
 }
 
@@ -65,6 +74,7 @@ void Zombie::setFrozen(bool frozen)
 void Zombie::takeDamage(int dmg)
 {
     m_health -= dmg;
+    if (m_health < 0) m_health = 0;
 }
 
 void Zombie::setState(State newState)
@@ -280,6 +290,28 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
 void Zombie::render(sf::RenderWindow& window)
 {
     window.draw(m_sprite);
+
+    // Draw health bar above head
+    sf::FloatRect b = m_sprite.getGlobalBounds();
+
+    // Width scaled to sprite width so healthbar fits nicely
+    float barW = b.width * 0.6f;
+    float barH = m_healthBarHeight;
+    float x = b.left + (b.width - barW) * 0.5f;
+    float y = b.top - barH - m_healthBarOffset;
+
+    float healthPercent = 0.f;
+    if (m_maxHealth > 0)
+        healthPercent = std::max(0, m_health) / static_cast<float>(m_maxHealth);
+
+    m_healthBarBack.setSize({ barW, barH });
+    m_healthBarBack.setPosition(x, y);
+
+    m_healthBarFront.setSize({ barW * healthPercent, barH });
+    m_healthBarFront.setPosition(x, y);
+
+    window.draw(m_healthBarBack);
+    window.draw(m_healthBarFront);
 }
 
 sf::FloatRect Zombie::getHitbox() const
@@ -323,6 +355,8 @@ void Zombie::reset(sf::Vector2f spawnPos)
     m_cooldownTimer = m_cooldownDuration;
     m_patrolChangeTimer = 0.f;
     m_patrolDir = { 0.f, 0.f };
+
+    m_health = m_maxHealth;
 }
 
 void Zombie::updateFacing(sf::Vector2f dir)
