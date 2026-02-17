@@ -3,24 +3,37 @@
 #include <cstdlib>
 #include <iostream>
 #include "Pathfinding.h"
+#include <algorithm>
 
 Zombie::Zombie(const sf::Texture& texture)
     : m_texture(&texture)
 {
     m_sprite.setTexture(*m_texture);
 
-    m_sprite.setOrigin(
-        m_sprite.getLocalBounds().width * 0.5f,
-        m_sprite.getLocalBounds().height * 0.5f
-    );
+    m_sprite.setOrigin(8.f, 12.f);
 
 
-    m_sprite.setScale(1.f, 1.f);
+    m_sprite.setScale(m_baseScale, m_baseScale);
 
     m_health = 100;
 
     m_cooldownTimer = m_cooldownDuration;
     m_hasDealtDamageThisAttack = false;
+
+    m_walkDownTex.loadFromFile("ASSETS/IMAGES/ZombieDownWalk.png");
+    m_walkDownTex.setSmooth(false);
+    m_walkUpTex.loadFromFile("ASSETS/IMAGES/ZombieUpWalk.png");
+    m_walkUpTex.setSmooth(false);
+    m_walkSideTex.loadFromFile("ASSETS/IMAGES/ZombieSideWalk.png");
+    m_walkSideTex.setSmooth(false);
+
+    m_attackDownTex.loadFromFile("ASSETS/IMAGES/ZombieDownAttack.png");
+    m_attackDownTex.setSmooth(false);
+    m_attackUpTex.loadFromFile("ASSETS/IMAGES/ZombieUpAttack.png");
+    m_attackUpTex.setSmooth(false);
+    m_attackSideTex.loadFromFile("ASSETS/IMAGES/ZombieSideAttack.png");
+    m_attackSideTex.setSmooth(false);
+
 }
 
 void Zombie::setPosition(float x, float y)
@@ -67,6 +80,20 @@ void Zombie::setState(State newState)
     {
         m_attackTimer = 0.f;
         m_hasDealtDamageThisAttack = false;
+
+        m_anim = Anim::Attack;
+        m_frameIndex = 0;
+        m_frameTimer = 0.f;
+    }
+    else if (newState == State::Patrol || newState == State::Chase)
+    {
+        if (m_anim != Anim::Walk)
+        {
+            m_anim = Anim::Walk;
+            m_frameIndex = 0;      
+            m_frameTimer = 0.f;  
+        }
+
     }
 
 
@@ -238,7 +265,15 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
         }
     }
 
+    if (m_velocity != sf::Vector2f{ 0.f, 0.f })
+    {
+        updateFacing(m_velocity);
+    }
+
     m_sprite.move(m_velocity * ds);
+
+    animate(dt);
+
 
 }
 
@@ -289,4 +324,77 @@ void Zombie::reset(sf::Vector2f spawnPos)
     m_patrolChangeTimer = 0.f;
     m_patrolDir = { 0.f, 0.f };
 }
+
+void Zombie::updateFacing(sf::Vector2f dir)
+{
+    if (std::abs(dir.x) > std::abs(dir.y))
+        m_facing = Facing::Side;
+    else if (dir.y < 0)
+        m_facing = Facing::Up;
+    else
+        m_facing = Facing::Down;
+}
+
+void Zombie::animate(sf::Time dt)
+{
+    m_frameTimer += dt.asSeconds();
+    if (m_frameTimer < m_frameTime)
+        return;
+
+    m_frameTimer = 0.f;
+    m_frameIndex++;
+
+    if (m_anim == Anim::Walk)
+    {
+        m_frameIndex %= 8;
+
+        if (m_facing == Facing::Down)
+        {
+            m_sprite.setTexture(m_walkDownTex);
+            m_sprite.setTextureRect({ m_frameIndex * 16, 0, 16, 24 });
+        }
+        else if (m_facing == Facing::Up)
+        {
+            m_sprite.setTexture(m_walkUpTex);
+            m_sprite.setTextureRect({ m_frameIndex * 16, 0, 16, 24 });
+        }
+        else
+        {
+            m_sprite.setTexture(m_walkSideTex);
+            m_sprite.setTextureRect({ m_frameIndex * 16, 0, 16, 24 });
+            float sign = (m_velocity.x < 0.f) ? -1.f : 1.f;
+            m_sprite.setScale(sign * m_baseScale, m_baseScale);
+        }
+    }
+    else // ATTACK
+    {
+        m_frameIndex = std::min(m_frameIndex + 1, 14);
+
+        if (m_facing == Facing::Down)
+        {
+            m_sprite.setTexture(m_attackDownTex);
+            m_sprite.setTextureRect({ m_frameIndex * 22, 0, 22, 30 });
+            m_sprite.setScale(m_baseScale, m_baseScale);
+        }
+        else if (m_facing == Facing::Up)
+        {
+            m_sprite.setTexture(m_attackUpTex);
+            m_sprite.setTextureRect({ m_frameIndex * 27, 0, 27, 24 });
+            m_sprite.setScale(m_baseScale, m_baseScale);
+        }
+        else
+        {
+            m_sprite.setTexture(m_attackSideTex);
+            m_sprite.setTextureRect({
+            m_frameIndex * 30,
+            0,
+            30,
+            23
+                });
+            float sign = (m_velocity.x < 0.f) ? -1.f : 1.f;
+            m_sprite.setScale(sign * m_baseScale, m_baseScale);
+        }
+    }
+}
+
 

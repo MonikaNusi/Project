@@ -38,10 +38,10 @@ Game::Game() :
 	m_visitedRooms.resize(6, std::vector<bool>(8, false));
 	m_visitedRooms[m_currentRoom.y][m_currentRoom.x] = true; //start rooms visited
 
-	if (!m_zombieTexture.loadFromFile("ASSETS/IMAGES/zombie.png"))
-	{
-		std::cout << "Failed to load zombie texture\n";
-	}
+	//if (!m_zombieTexture.loadFromFile("ASSETS/IMAGES/zombie.png"))
+	//{
+	//	std::cout << "Failed to load zombie texture\n";
+	//}
 	spawnZombiesForRoom();
 	
 

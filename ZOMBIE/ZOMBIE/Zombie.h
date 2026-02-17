@@ -14,6 +14,20 @@ public:
         Cooldown
     };
 
+
+    enum class Anim
+    {
+        Walk,
+        Attack
+    };
+
+    enum class Facing
+    {
+        Down,
+        Side,
+        Up
+    };
+
    // Zombie();
     explicit Zombie(const sf::Texture& texture);
 
@@ -43,6 +57,9 @@ public:
     bool isDead() const { return m_health <= 0; }
 
     int tryDealDamage(const sf::FloatRect& playerHitbox);
+
+    void updateFacing(sf::Vector2f dir);
+    void Zombie::animate(sf::Time dt);
 
 private:
     void setState(State newState);
@@ -81,6 +98,26 @@ private:
     sf::Vector2f m_moveTarget;
 
     bool m_hasDealtDamageThisAttack{ false };
+
+    // Animation state
+    Anim m_anim = Anim::Walk;
+    Facing m_facing = Facing::Down;
+
+    // Frame timing
+    int m_frameIndex = 0;
+    float m_frameTimer = 0.f;
+    float m_frameTime = 0.14f;
+
+    float m_baseScale = 2.f;
+
+    // Textures
+    sf::Texture m_walkDownTex;
+    sf::Texture m_walkUpTex;
+    sf::Texture m_walkSideTex;
+
+    sf::Texture m_attackDownTex;
+    sf::Texture m_attackUpTex;
+    sf::Texture m_attackSideTex;
 
 };
 
