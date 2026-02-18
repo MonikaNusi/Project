@@ -598,17 +598,17 @@ void Game::render()
 	{
 		z.render(m_window);
 
-		//sf::Text stateText;
-		//stateText.setFont(m_debugFont);
-		//stateText.setCharacterSize(14);
-		//stateText.setFillColor(sf::Color::White);
+		/*sf::Text stateText;
+		stateText.setFont(m_debugFont);
+		stateText.setCharacterSize(14);
+		stateText.setFillColor(sf::Color::White);
 
-		//stateText.setString(zombieStateToString(z.getState()));
+		stateText.setString(zombieStateToString(z.getState()));
 
-		//sf::Vector2f pos = z.getPosition();
-		//stateText.setPosition(pos.x - 20.f, pos.y - 40.f);
+		sf::Vector2f pos = z.getPosition();
+		stateText.setPosition(pos.x - 20.f, pos.y - 60.f);
 
-		//m_window.draw(stateText);
+		m_window.draw(stateText);*/
 
 
 		sf::RectangleShape hb;

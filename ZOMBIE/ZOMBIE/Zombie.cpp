@@ -17,7 +17,6 @@ Zombie::Zombie(const sf::Texture& texture)
 
     m_health = m_maxHealth;
 
-    //m_health = 100;
 
     m_cooldownTimer = m_cooldownDuration;
     m_hasDealtDamageThisAttack = false;
@@ -95,8 +94,12 @@ void Zombie::setState(State newState)
         m_frameIndex = 0;
         m_frameTimer = 0.f;
     }
-    else if (newState == State::Patrol || newState == State::Chase)
+    else if (newState == State::Patrol)
     {
+        std::cout << "Reset patrol state\n";
+        m_patrolDir = { 0.f, 0.f };
+        m_patrolChangeTimer = m_patrolChangeInterval;
+
         if (m_anim != Anim::Walk)
         {
             m_anim = Anim::Walk;
@@ -104,6 +107,15 @@ void Zombie::setState(State newState)
             m_frameTimer = 0.f;  
         }
 
+    }
+    else if (newState == State::Chase)
+    {
+        if (m_anim != Anim::Walk)
+        {
+            m_anim = Anim::Walk;
+            m_frameIndex = 0;
+            m_frameTimer = 0.f;
+        }
     }
 
 
@@ -152,8 +164,8 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
         );
 
         sf::Vector2i targetTile(
-            static_cast<int>(playerPos.x / tileW),
-            static_cast<int>(playerPos.y / tileH)
+            static_cast<int>(target.x / tileW),
+            static_cast<int>(target.y / tileH)
         );
 
         if (targetTile != m_lastPlayerTile || m_pathTimer >= m_pathInterval)
@@ -171,10 +183,7 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
                     next.y * tileH + tileH * 0.5f
                 };
             }
-          //  else
-           // {
-               // m_moveTarget = playerPos;
-          //  }
+          
         }
     }
 
@@ -188,6 +197,7 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
         {
             setState(State::Chase);
             m_alerted = true;
+            m_hasSpreadAlert = false;
             m_lastKnownPlayerPos = playerPos;
         }
         else
@@ -196,7 +206,7 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
         }
     }
 
-    if (m_alerted)
+    if (m_alerted && !m_hasSpreadAlert)
     {
         for (Zombie* other : zombies)
         {
@@ -210,6 +220,7 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
                 other->m_lastKnownPlayerPos = m_lastKnownPlayerPos;
             }
         }
+        m_hasSpreadAlert = true;
     }
 
 
@@ -245,18 +256,48 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
             return;
         }
 
+        if (dist > m_chaseRange)
+        {
+            m_searchTimer += ds;
+        }
+        else
+        {
+            m_searchTimer = 0.f; // player still visible
+            m_lastKnownPlayerPos = playerPos;
+        }
+
+        //Give up after searching too long
+        if (m_searchTimer >= m_maxSearchTime)
+        {
+            m_alerted = false;
+            m_hasSpreadAlert = false;
+            m_searchTimer = 0.f;
+            setState(State::Patrol);
+            return;
+        }
+
         sf::Vector2f dir = m_moveTarget - getPosition();
         float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+
+        if (len <= 2.f && dist > m_chaseRange)
+        {
+            m_velocity = { 0.f, 0.f };
+            return;
+        }
+
 
         if (len > 2.f)
         {
             dir /= len;
-            m_velocity = dir * m_speedChase;
+
+            float speed =
+                (dist <= m_chaseRange)
+                ? m_speedChase
+                : m_speedChase * 0.6f; // slower while searching
+
+            m_velocity = dir * speed;
         }
-        else
-        {
-            m_moveTarget = playerPos;
-        }
+   
     }
     else if (m_state == State::Attack)
     {

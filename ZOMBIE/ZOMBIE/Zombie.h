@@ -136,7 +136,11 @@ private:
     bool m_alerted = false;
     sf::Vector2f m_lastKnownPlayerPos;
     float m_alertRadius = 200.f;
+    bool m_hasSpreadAlert = false;
 
+
+    float m_searchTimer = 0.f;
+    float m_maxSearchTime = 2.5f;
 
 };
 
