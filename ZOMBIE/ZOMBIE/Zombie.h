@@ -62,6 +62,11 @@ public:
     void updateFacing(sf::Vector2f dir);
     void Zombie::animate(sf::Time dt);
 
+    float getAlertRadius() const { return m_alertRadius; }
+    float getChaseRange() const { return m_chaseRange; }
+    bool isAlerted() const { return m_alerted; }
+    sf::Vector2f getLastKnownPlayerPos() const { return m_lastKnownPlayerPos; }
+
 private:
     void setState(State newState);
     float distanceTo(sf::Vector2f p) const;
@@ -141,6 +146,7 @@ private:
 
     float m_searchTimer = 0.f;
     float m_maxSearchTime = 2.5f;
+
 
 };
 

@@ -45,6 +45,8 @@ private:
 	sf::RectangleShape m_healthBarBack;
 	sf::RectangleShape m_healthBarFront;
 
+	bool m_showAIDebug = false;
+
 	void processEvents();
 	void processKeys(sf::Event t_event);
 	void update(sf::Time t_deltaTime);

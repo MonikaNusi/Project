@@ -131,6 +131,10 @@ void Game::processKeys(sf::Event t_event)
 	{
 		m_exitGame = true;
 	}
+	if (sf::Keyboard::Q == t_event.key.code)
+	{
+		m_showAIDebug = !m_showAIDebug;
+	}
 }
 
 void Game::update(sf::Time t_deltaTime)
@@ -609,6 +613,51 @@ void Game::render()
 		stateText.setPosition(pos.x - 20.f, pos.y - 60.f);
 
 		m_window.draw(stateText);*/
+
+		if (m_showAIDebug)
+		{
+			// Alert radius
+			sf::CircleShape alertCircle;
+			alertCircle.setRadius(z.getAlertRadius());
+			alertCircle.setOrigin(z.getAlertRadius(), z.getAlertRadius());
+			alertCircle.setPosition(z.getPosition());
+			alertCircle.setFillColor(sf::Color::Transparent);
+			alertCircle.setOutlineThickness(1.f);
+			alertCircle.setOutlineColor(sf::Color(255, 200, 0, 120));
+			m_window.draw(alertCircle);
+
+			// Chase range
+			sf::CircleShape chaseCircle;
+			chaseCircle.setRadius(z.getChaseRange());
+			chaseCircle.setOrigin(z.getChaseRange(), z.getChaseRange());
+			chaseCircle.setPosition(z.getPosition());
+			chaseCircle.setFillColor(sf::Color::Transparent);
+			chaseCircle.setOutlineThickness(1.f);
+			chaseCircle.setOutlineColor(sf::Color(0, 150, 255, 120));
+			m_window.draw(chaseCircle);
+
+			// Last known player position
+			if (z.isAlerted())
+			{
+				sf::Vector2f p = z.getLastKnownPlayerPos();
+
+				sf::RectangleShape crossH({ 10.f, 2.f });
+				sf::RectangleShape crossV({ 2.f, 10.f });
+
+				crossH.setOrigin(5.f, 1.f);
+				crossV.setOrigin(1.f, 5.f);
+
+				crossH.setPosition(p);
+				crossV.setPosition(p);
+
+				crossH.setFillColor(sf::Color::Red);
+				crossV.setFillColor(sf::Color::Red);
+
+				m_window.draw(crossH);
+				m_window.draw(crossV);
+			}
+		}
+
 
 
 		sf::RectangleShape hb;
