@@ -112,7 +112,8 @@ void Zombie::setState(State newState)
 
 void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::vector<int>>& tiles,
     float tileW,
-    float tileH)
+    float tileH,
+    const std::vector<Zombie*>& zombies)
 {
     if (m_frozen)
         return;
@@ -148,23 +149,25 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
             static_cast<int>(playerPos.y / tileH)
         );
 
-        auto path = findPath(tiles, zombieTile, playerTile);
-
-        if (path.size() > 1)
+        if (playerTile != m_lastPlayerTile || m_pathTimer >= m_pathInterval)
         {
+            m_lastPlayerTile = playerTile;
+            m_pathTimer = 0.f;
 
+            auto path = findPath(tiles, zombieTile, playerTile);
 
-            sf::Vector2i next = path[1];
-
-            m_moveTarget = {
-                next.x * tileW + tileW * 0.5f,
-                next.y * tileH + tileH * 0.5f
-            };
-        }
-        else
-        {
-           
-            m_moveTarget = playerPos;
+            if (path.size() > 1)
+            {
+                sf::Vector2i next = path[1];
+                m_moveTarget = {
+                    next.x * tileW + tileW * 0.5f,
+                    next.y * tileH + tileH * 0.5f
+                };
+            }
+            else
+            {
+                m_moveTarget = playerPos;
+            }
         }
     }
 
@@ -279,6 +282,33 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
     {
         updateFacing(m_velocity);
     }
+
+    //Separation steering
+    sf::Vector2f separation{ 0.f, 0.f };
+    int neighbourCount = 0;
+
+    for (const Zombie* other : zombies)
+    {
+        if (other == this) continue;
+
+        sf::Vector2f diff = getPosition() - other->getPosition();
+        float distSq = diff.x * diff.x + diff.y * diff.y;
+
+        float radiusSq = m_separationRadius * m_separationRadius;
+        
+        if (distSq > 0.01f && distSq < radiusSq)
+        {
+            separation += diff / std::sqrt(distSq);
+            neighbourCount++;
+        }
+    }
+
+    if (neighbourCount > 0)
+    {
+        separation /= static_cast<float>(neighbourCount);
+        m_velocity += separation * m_separationStrength;
+    }
+
 
     m_sprite.move(m_velocity * ds);
 

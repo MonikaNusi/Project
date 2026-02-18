@@ -155,6 +155,10 @@ void Game::update(sf::Time t_deltaTime)
 
 	if (m_transitionState != TransitionState::Sliding)
 	{
+		std::vector<Zombie*> zombiePtrs;
+		for (auto& other : m_zombies)
+			zombiePtrs.push_back(&other);
+
 		for (auto& z : m_zombies)
 		{
 			sf::Vector2f oldPos = z.getPosition();
@@ -169,7 +173,8 @@ void Game::update(sf::Time t_deltaTime)
 				playerCenter,  
 				room.tiles,
 				tileW,
-				tileH
+				tileH,
+				zombiePtrs
 			);
 
 			// Zombie attack
@@ -397,7 +402,7 @@ void Game::spawnZombiesForRoom()
 		count = 2;
 		break;
 	case MapGenerator::Room::RoomType::Trap:
-		count = 3;
+		count = 10;
 		break;
 	case MapGenerator::Room::RoomType::Treasure:
 		count = 1;

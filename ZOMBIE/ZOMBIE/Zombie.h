@@ -43,7 +43,8 @@ public:
         sf::Vector2f playerPos,
         const std::vector<std::vector<int>>& tiles,
         float tileW,
-        float tileH
+        float tileH,
+        const std::vector<Zombie*>& zombies
     );
     void render(sf::RenderWindow& window);
 
@@ -96,6 +97,10 @@ private:
     int m_maxHealth{ 100 };
     int m_health{ 100 };
 
+    sf::Vector2i m_lastPlayerTile{ -1, -1 };
+    float m_pathTimer = 0.f;
+    float m_pathInterval = 0.4f;
+
     sf::Vector2f m_moveTarget;
 
     bool m_hasDealtDamageThisAttack{ false };
@@ -119,6 +124,9 @@ private:
     sf::Texture m_attackDownTex;
     sf::Texture m_attackUpTex;
     sf::Texture m_attackSideTex;
+
+    float m_separationRadius = 50.f;
+    float m_separationStrength = 40.f;
 
     sf::RectangleShape m_healthBarBack;
     sf::RectangleShape m_healthBarFront;
