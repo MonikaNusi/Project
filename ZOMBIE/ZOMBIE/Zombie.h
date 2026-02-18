@@ -133,5 +133,10 @@ private:
     float m_healthBarHeight{ 6.f };
     float m_healthBarOffset{ 6.f };
 
+    bool m_alerted = false;
+    sf::Vector2f m_lastKnownPlayerPos;
+    float m_alertRadius = 200.f;
+
+
 };
 

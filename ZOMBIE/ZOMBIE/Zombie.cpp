@@ -139,22 +139,29 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
 
     if (m_state == State::Chase || m_state == State::Cooldown)
     {
+        m_pathTimer += ds;
+
+        sf::Vector2f target =
+            (dist <= m_chaseRange)
+            ? playerPos
+            : m_lastKnownPlayerPos;
+
         sf::Vector2i zombieTile(
             static_cast<int>(getPosition().x / tileW),
             static_cast<int>(getPosition().y / tileH)
         );
 
-        sf::Vector2i playerTile(
+        sf::Vector2i targetTile(
             static_cast<int>(playerPos.x / tileW),
             static_cast<int>(playerPos.y / tileH)
         );
 
-        if (playerTile != m_lastPlayerTile || m_pathTimer >= m_pathInterval)
+        if (targetTile != m_lastPlayerTile || m_pathTimer >= m_pathInterval)
         {
-            m_lastPlayerTile = playerTile;
+            m_lastPlayerTile = targetTile;
             m_pathTimer = 0.f;
 
-            auto path = findPath(tiles, zombieTile, playerTile);
+            auto path = findPath(tiles, zombieTile, targetTile);
 
             if (path.size() > 1)
             {
@@ -164,10 +171,10 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
                     next.y * tileH + tileH * 0.5f
                 };
             }
-            else
-            {
-                m_moveTarget = playerPos;
-            }
+          //  else
+           // {
+               // m_moveTarget = playerPos;
+          //  }
         }
     }
 
@@ -180,12 +187,31 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
         else if (dist <= m_chaseRange)
         {
             setState(State::Chase);
+            m_alerted = true;
+            m_lastKnownPlayerPos = playerPos;
         }
         else
         {
             if (m_state == State::Idle) setState(State::Patrol);
         }
     }
+
+    if (m_alerted)
+    {
+        for (Zombie* other : zombies)
+        {
+            if (other == this) continue;
+
+            float d = other->distanceTo(getPosition());
+            if (d < m_alertRadius && other->getState() == State::Patrol)
+            {
+                other->setState(State::Chase);
+                other->m_alerted = true;
+                other->m_lastKnownPlayerPos = m_lastKnownPlayerPos;
+            }
+        }
+    }
+
 
     m_velocity = { 0.f, 0.f };
 

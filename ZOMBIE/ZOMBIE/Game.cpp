@@ -399,7 +399,7 @@ void Game::spawnZombiesForRoom()
 	switch (room.type)
 	{
 	case MapGenerator::Room::RoomType::Normal:
-		count = 2;
+		count = 5;
 		break;
 	case MapGenerator::Room::RoomType::Trap:
 		count = 10;
