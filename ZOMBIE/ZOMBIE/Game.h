@@ -72,4 +72,34 @@ private:
 	sf::RenderWindow m_window; // main SFML window
 	bool m_exitGame{ false }; // control exiting game
 
+	// Key / unlock system
+	struct Key
+	{
+		sf::Vector2f pos;
+		bool picked{ false };
+		sf::RectangleShape shape;
+		Key() = default;
+		Key(sf::Vector2f p)
+			: pos(p)
+		{
+			shape.setSize({ 18.f, 18.f });
+			shape.setOrigin({ 9.f, 9.f });
+			shape.setPosition(p);
+			shape.setFillColor(sf::Color::Yellow);
+		}
+	};
+
+	std::vector<Key> m_keys;
+	bool m_playerHasKey{ false };
+
+	// unlocking progress
+	float m_unlockHoldTimer{ 0.f };
+	const float m_unlockHoldRequired{ 5.f };
+	bool m_isUnlocking{ false };
+	sf::Vector2i m_unlockTargetRoom{ -1, -1 };
+	int m_unlockTargetDirX{ 0 };
+	int m_unlockTargetDirY{ 0 };
+
+	// debug / UX: show when player is near a locked door (set in update, read in render)
+	bool m_debugNearLockedDoor{ false };
 };

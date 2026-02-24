@@ -454,6 +454,8 @@ void Zombie::reset(sf::Vector2f spawnPos)
     m_patrolDir = { 0.f, 0.f };
 
     m_health = m_maxHealth;
+
+    m_hasKey = false;
 }
 
 void Zombie::updateFacing(sf::Vector2f dir)
@@ -526,6 +528,17 @@ void Zombie::animate(sf::Time dt)
             m_sprite.setScale(sign * m_baseScale, m_baseScale);
         }
     }
+}
+
+// Key accessors
+void Zombie::setHasKey(bool v)
+{
+    m_hasKey = v;
+}
+
+bool Zombie::hasKey() const
+{
+    return m_hasKey;
 }
 
 

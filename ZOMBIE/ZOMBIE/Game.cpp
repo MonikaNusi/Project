@@ -6,7 +6,8 @@
 #include "Game.h"
 #include <iostream>
 #include <algorithm>
-
+#include <cmath>
+#include <cstdlib>
 
 std::string zombieStateToString(Zombie::State state);
 
@@ -38,10 +39,7 @@ Game::Game() :
 	m_visitedRooms.resize(6, std::vector<bool>(8, false));
 	m_visitedRooms[m_currentRoom.y][m_currentRoom.x] = true; //start rooms visited
 
-	//if (!m_zombieTexture.loadFromFile("ASSETS/IMAGES/zombie.png"))
-	//{
-	//	std::cout << "Failed to load zombie texture\n";
-	//}
+
 	spawnZombiesForRoom();
 	
 
@@ -154,7 +152,7 @@ void Game::update(sf::Time t_deltaTime)
 	{
 		m_player.hadnleInput();
 		m_player.update(t_deltaTime);
-		std::cout<<oldPos.y<<std::endl;
+		//std::cout<<oldPos.y<<std::endl;
 	}
 
 	if (m_transitionState != TransitionState::Sliding)
@@ -221,8 +219,24 @@ void Game::update(sf::Time t_deltaTime)
 		}
 	}
 
-	m_zombies.erase(std::remove_if(m_zombies.begin(), m_zombies.end(),
-		[](const Zombie& z) { return z.isDead(); }), m_zombies.end());
+	// Handle dead zombies and spawn dropped keys
+	for (size_t i = 0; i < m_zombies.size(); )
+	{
+		if (m_zombies[i].isDead())
+		{
+			if (m_zombies[i].hasKey())
+			{
+				// spawn key at zombie position
+				m_keys.emplace_back(m_zombies[i].getPosition());
+			}
+
+			m_zombies.erase(m_zombies.begin() + i);
+		}
+		else
+		{
+			++i;
+		}
+	}
 
 	float healthPercent = (float)m_player.getHealth() / m_player.getMaxHealth();
 	m_healthBarFront.setSize({ 200.f * healthPercent, 20.f });
@@ -230,6 +244,7 @@ void Game::update(sf::Time t_deltaTime)
 
 
 	sf::FloatRect spriteBounds = m_player.getSpriteBounds();
+
 
 
 
@@ -287,6 +302,23 @@ void Game::update(sf::Time t_deltaTime)
 
 	}
 
+	// handle key pickup by player
+	for (auto& key : m_keys)
+	{
+		if (key.picked) continue;
+		sf::FloatRect keyRect(key.pos.x - 9.f, key.pos.y - 9.f, 18.f, 18.f);
+		if (keyRect.intersects(playerBox))
+		{
+			key.picked = true;
+			m_playerHasKey = true;
+			std::cout << "Picked up key\n";
+		}
+	}
+
+	// remove picked keys from world vector
+	m_keys.erase(std::remove_if(m_keys.begin(), m_keys.end(), [](const Key& k) { return k.picked; }), m_keys.end());
+
+
 	sf::Vector2f pos = m_player.getPosition();
 	sf::Vector2f size = m_player.getSize();
 	sf::Vector2f center = pos + size / 2.f;
@@ -296,6 +328,207 @@ void Game::update(sf::Time t_deltaTime)
 	const int windowH = m_window.getSize().y;
 	float margin = 40.f;
 
+	// tile sizes and door mid positions to check locked status
+	float tileW = static_cast<float>(windowW) / current.width;
+	float tileH = static_cast<float>(windowH) / current.height;
+	int midX = current.width / 2;
+	int midY = current.height / 2;
+
+	//check nearby locked door tile and handle E hold
+	bool nearLockedDoor = false;
+	int doorRoomX = -1, doorRoomY = -1;
+	int doorDirX = 0, doorDirY = 0;
+	sf::Vector2f doorTileCenter;
+
+	//checks 3 locked tiles for a door and detects proximity
+	auto checkDoor = [&](int tx, int ty, int dx, int dy) -> bool
+		{
+			for (int o = -1; o <= 1; ++o)
+			{
+				int cx = tx + (dx != 0 ? 0 : o);
+				int cy = ty + (dy != 0 ? 0 : o);
+
+				if (cx < 0 || cy < 0 || cx >= current.width || cy >= current.height)
+					continue;
+
+				if (current.tiles[cy][cx] == 2) // locked tile
+				{
+					float px = (cx + 0.5f) * tileW;
+					float py = (cy + 0.5f) * tileH;
+
+					float dxp = px - center.x;
+					float dyp = py - center.y;
+					float dist = std::sqrt(dxp * dxp + dyp * dyp);
+
+					// Increased detection radius
+					if (dist < 80.f)
+					{
+						nearLockedDoor = true;
+						doorRoomX = m_currentRoom.x;
+						doorRoomY = m_currentRoom.y;
+						doorDirX = dx;
+						doorDirY = dy;
+						doorTileCenter = { px, py };
+						return true;
+					}
+				}
+			}
+			return false;
+		};
+
+	// Check all four door directions
+	if (current.exitRight)
+	{
+		int tx = current.width - 1;
+		int ty = midY;
+		if (checkDoor(tx, ty, 1, 0))
+			goto foundDoor;
+	}
+
+	if (current.exitLeft)
+	{
+		int tx = 0;
+		int ty = midY;
+		if (checkDoor(tx, ty, -1, 0))
+			goto foundDoor;
+	}
+
+	if (current.exitDown)
+	{
+		int tx = midX;
+		int ty = current.height - 1;
+		if (checkDoor(tx, ty, 0, 1))
+			goto foundDoor;
+	}
+
+	if (current.exitUp)
+	{
+		int tx = midX;
+		int ty = 0;
+		if (checkDoor(tx, ty, 0, -1))
+			goto foundDoor;
+	}
+
+foundDoor:
+	m_debugNearLockedDoor = nearLockedDoor;
+
+	//unlocking logic
+
+	if (nearLockedDoor && m_playerHasKey)
+	{
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::E))
+		{
+			if (!m_isUnlocking)
+			{
+				// Start unlocking
+				m_isUnlocking = true;
+				m_unlockTargetRoom = { doorRoomX, doorRoomY };
+				m_unlockTargetDirX = doorDirX;
+				m_unlockTargetDirY = doorDirY;
+				m_unlockHoldTimer = 0.f;
+				std::cout << "Started unlocking door at (" << doorDirX << "," << doorDirY << ")\n";
+			}
+			else
+			{
+				// Continue holding - check if same door
+				if (m_unlockTargetRoom.x == doorRoomX &&
+					m_unlockTargetRoom.y == doorRoomY &&
+					m_unlockTargetDirX == doorDirX &&
+					m_unlockTargetDirY == doorDirY)
+				{
+					m_unlockHoldTimer += t_deltaTime.asSeconds();
+
+					if (m_unlockHoldTimer >= m_unlockHoldRequired)
+					{
+						//unlock the door
+						int rx = doorRoomX;
+						int ry = doorRoomY;
+						int nx = rx + doorDirX;
+						int ny = ry + doorDirY;
+
+						// Clear door tiles in both current and next room
+						auto clearDoorTiles = [&](int roomX, int roomY, int dx, int dy)
+							{
+								if (roomX < 0 || roomY < 0 || roomX >= 8 || roomY >= 6)
+									return;
+
+								int mid = MapGenerator::Room::width / 2;
+
+								if (dx == 1) // right door
+								{
+									for (int dy2 = -1; dy2 <= 1; ++dy2)
+										m_mapGenerator.setTile(roomX, roomY,
+											MapGenerator::Room::width - 1,
+											mid + dy2, 0);
+								}
+								else if (dx == -1) // left door
+								{
+									for (int dy2 = -1; dy2 <= 1; ++dy2)
+										m_mapGenerator.setTile(roomX, roomY,
+											0, mid + dy2, 0);
+								}
+								else if (dy == 1) // down door
+								{
+									for (int dx2 = -1; dx2 <= 1; ++dx2)
+										m_mapGenerator.setTile(roomX, roomY,
+											mid + dx2,
+											MapGenerator::Room::height - 1, 0);
+								}
+								else if (dy == -1) // up door
+								{
+									for (int dx2 = -1; dx2 <= 1; ++dx2)
+										m_mapGenerator.setTile(roomX, roomY,
+											mid + dx2, 0, 0);
+								}
+							};
+
+						clearDoorTiles(rx, ry, doorDirX, doorDirY);
+						clearDoorTiles(nx, ny, -doorDirX, -doorDirY);
+
+						m_playerHasKey = false;
+						m_unlockHoldTimer = 0.f;
+						m_isUnlocking = false;
+						m_unlockTargetRoom = { -1, -1 };
+
+						std::cout << "Door unlocked successfully!\n";
+					}
+				}
+				else
+				{
+					// Switched to different door - restart
+					m_unlockHoldTimer = 0.f;
+					m_isUnlocking = true;
+					m_unlockTargetRoom = { doorRoomX, doorRoomY };
+					m_unlockTargetDirX = doorDirX;
+					m_unlockTargetDirY = doorDirY;
+					std::cout << "Switched unlocking target\n";
+				}
+			}
+		}
+		else
+		{
+			// E key released - cancel unlock
+			if (m_isUnlocking)
+				std::cout << "Unlock cancelled (key released)\n";
+
+			m_unlockHoldTimer = 0.f;
+			m_isUnlocking = false;
+			m_unlockTargetRoom = { -1, -1 };
+		}
+	}
+	else
+	{
+		// Not near door or no key - cancel unlock
+		if (m_isUnlocking)
+			std::cout << "Unlock cancelled (moved away or no key)\n";
+
+		m_unlockHoldTimer = 0.f;
+		m_isUnlocking = false;
+		m_unlockTargetRoom = { -1, -1 };
+	}
+
+
+	// sliding / room transition logic
 	// Handle active sliding transition
 	if (m_transitionState == TransitionState::Sliding)
 	{
@@ -360,18 +593,31 @@ void Game::update(sf::Time t_deltaTime)
 	{
 		sf::Vector2i newRoom = m_currentRoom; //start with the current room
 
-		//player is at right edge and this room has a right exit
+		//player is at right edge and this room has a right exit AND the door tile is NOT locked
 		if (center.x > windowW - margin && current.exitRight)
-			newRoom.x++;
-		//player is at left edge and this room has a left exit
+		{
+			// Check the border tile for locked status (locked tile value == 2)
+			if (current.tiles[midY][current.width - 1] == 0)
+				newRoom.x++;
+		}
+		//player is at left edge and this room has a left exit AND not locked
 		else if (center.x < margin && current.exitLeft)
-			newRoom.x--;
-		//player is at top edge and this room has a top exit
+		{
+			if (current.tiles[midY][0] == 0)
+				newRoom.x--;
+		}
+		//player is at bottom edge and this room has a down exit AND not locked
 		else if (center.y > windowH - margin && current.exitDown)
-			newRoom.y++;
-		//player is at top edge and this rooom has a top exit
+		{
+			if (current.tiles[current.height - 1][midX] == 0)
+				newRoom.y++;
+		}
+		//player is at top edge and this room has an up exit AND not locked
 		else if (center.y < margin && current.exitUp)
-			newRoom.y--;
+		{
+			if (current.tiles[0][midX] == 0)
+				newRoom.y--;
+		}
 
 		//if newRoom changed player endered the door
 		if (newRoom != m_currentRoom)
@@ -428,6 +674,14 @@ void Game::spawnZombiesForRoom()
 
 		m_zombies.push_back(z);
 	}
+
+	// randomly assign one zombie to carry the key
+	if (!m_zombies.empty())
+	{
+		int idx = std::rand() % static_cast<int>(m_zombies.size());
+		m_zombies[idx].setHasKey(true);
+		std::cout << "Assigned key to zombie " << idx << "\n";
+	}
 }
 
 
@@ -451,7 +705,7 @@ sf::Vector2f Game::findSafeSpawn(const MapGenerator::Room& room)
 		};
 	}
 
-	//Otherwise search for ANY nearby floor tile
+	//Otherwise search for any nearby floor tile
 	for (int y = 1; y < room.height - 1; ++y)
 	{
 		for (int x = 1; x < room.width - 1; ++x)
@@ -517,12 +771,12 @@ bool Game::isCollidingWithWall(const sf::FloatRect& playerBox)
 	topTile = std::max(0, std::min(room.height - 1, topTile));
 	bottomTile = std::max(0, std::min(room.height - 1, bottomTile));
 
-	// Check any wall tile
+	// Check any wall tile (treat locked tiles (2) as wall as well)
 	for (int y = topTile; y <= bottomTile; ++y)
 	{
 		for (int x = leftTile; x <= rightTile; ++x)
 		{
-			if (room.tiles[y][x] == 1) // wall tile
+			if (room.tiles[y][x] == 1 || room.tiles[y][x] == 2) // wall or locked door
 			{
 				return true; //collision detected
 			}
@@ -567,6 +821,11 @@ void Game::render()
 					//tile.setTexture(&m_mapGenerator.getWallTexture());
 					//tile.setTextureRect(sf::IntRect(0, 0, texSize * repeatX, texSize * repeatY));
 					tile.setFillColor(sf::Color(40, 40, 40));
+				}
+				else if (room.tiles[i][j] == 2) // locked door
+				{
+					// Draw locked doors in a different color so player can see them
+					tile.setFillColor(sf::Color(100, 60, 180));
 				}
 				else // floor
 				{
@@ -668,6 +927,15 @@ void Game::render()
 		m_window.draw(hb);
 	}
 
+	// draw dropped keys
+	for (const auto& key : m_keys)
+	{
+		if (!key.picked)
+		{
+			m_window.draw(key.shape);
+		}
+	}
+
 	for (const auto& b : m_bullets)
 	{
 		b.render(m_window);
@@ -681,6 +949,7 @@ void Game::render()
 	m_window.draw(hb);
 
 
+	// draw UI in screen space
 	m_window.setView(m_window.getDefaultView());
 
 	m_window.draw(m_ammoText);
@@ -689,6 +958,43 @@ void Game::render()
 	m_window.draw(m_healthBarFront);
 	m_window.draw(m_ammoText);
 
+	// draw key indicator
+	if (m_playerHasKey)
+	{
+		sf::Text t("Key: YES", m_uiFont, 20);
+		t.setPosition(700.f, 50.f);
+		t.setFillColor(sf::Color::Yellow);
+		m_window.draw(t);
+	}
+	else
+	{
+		sf::Text t("Key: NO", m_uiFont, 20);
+		t.setPosition(700.f, 50.f);
+		t.setFillColor(sf::Color::White);
+		m_window.draw(t);
+	}
+
+	// draw unlock progress if active
+	
+
+	// draw unlock hint if near door and has key
+	m_window.setView(m_window.getDefaultView());
+	if (m_debugNearLockedDoor && m_playerHasKey)
+	{
+		sf::Text hint("Hold E to unlock", m_uiFont, 18);
+		hint.setPosition(700.f, 110.f);
+		hint.setFillColor(sf::Color::White);
+		m_window.draw(hint);
+
+		if (m_isUnlocking)
+		{
+			std::string s = "Unlocking: " + std::to_string(static_cast<int>(m_unlockHoldTimer)) + " / " + std::to_string(static_cast<int>(m_unlockHoldRequired));
+			sf::Text tx(s, m_uiFont, 16);
+			tx.setPosition(700.f, 135.f);
+			tx.setFillColor(sf::Color::White);
+			m_window.draw(tx);
+		}
+	}
 
 	drawMiniMap();
 

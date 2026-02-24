@@ -36,8 +36,8 @@ private:
 	float m_fireCooldown = 0.f;
 	float m_fireRate = 0.25f;
 
-	int m_ammo = 20; 
-	int m_maxAmmo = 50;
+	int m_ammo = 100; 
+	int m_maxAmmo = 100;
 
 	int m_health = 100;
 	int m_maxHealth = 100;

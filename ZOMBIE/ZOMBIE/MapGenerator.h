@@ -20,7 +20,7 @@ public:
         //interior map data
         static const int width = 10;
         static const int height = 10;
-        std::vector<std::vector<int>> tiles; // 0 = floor, 1 = wall
+        std::vector<std::vector<int>> tiles; // 0 = floor, 1 = wall, 2 = locked door
     };
 
     MapGenerator(int roomsX, int roomsY, int roomSize);
@@ -31,6 +31,9 @@ public:
 
     const sf::Texture& getWallTexture() const { return m_wallTexture; }
     const sf::Texture& getFloorTexture() const { return m_floorTexture; }
+
+    // Runtime tile modification
+    void setTile(int roomX, int roomY, int tileX, int tileY, int value);
 
 private:
 

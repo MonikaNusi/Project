@@ -28,6 +28,16 @@ const MapGenerator::Room& MapGenerator::getRoom(int x, int y) const
     return m_rooms[y][x];
 }
 
+void MapGenerator::setTile(int roomX, int roomY, int tileX, int tileY, int value)
+{
+    if (roomX < 0 || roomY < 0 || roomX >= m_rooms[0].size() || roomY >= m_rooms.size())
+        return;
+    Room& r = m_rooms[roomY][roomX];
+    if (tileX < 0 || tileY < 0 || tileX >= Room::width || tileY >= Room::height)
+        return;
+    r.tiles[tileY][tileX] = value;
+}
+
 
 // Generate the layout of rooms
 void MapGenerator::generate()
@@ -196,6 +206,7 @@ void MapGenerator::generateRoomLayout(Room& room)
 {
     const int WALL = 1;
     const int FLOOR = 0;
+    const int LOCKED = 2; // new: locked door tile
     int width = Room::width;
     int height = Room::height;
 
@@ -219,47 +230,64 @@ void MapGenerator::generateRoomLayout(Room& room)
     //middle tile for door carving
     int mid = width / 2;
 
-    // if has exit Up - carve door
+    // If room has exit Up - mark only the edge tile locked and ensure inner tile is floor
     if (room.exitUp)
     {
         for (int dx = -1; dx <= 1; ++dx) //door 3 tiles wide
         {
             int j = mid + dx;
             if (j >= 0 && j < width)
-                room.tiles[0][j] = FLOOR, room.tiles[1][j] = FLOOR;
+            {
+                room.tiles[0][j] = LOCKED;
+                // ensure tile just inside the room is floor (so locked barrier is single-tile thick)
+                if (height > 1)
+                    room.tiles[1][j] = FLOOR;
+            }
         }
     }
 
-    // Down
+    
     if (room.exitDown)
     {
         for (int dx = -1; dx <= 1; ++dx)
         {
             int j = mid + dx;
             if (j >= 0 && j < width)
-                room.tiles[height - 1][j] = FLOOR, room.tiles[height - 2][j] = FLOOR;
+            {
+                room.tiles[height - 1][j] = LOCKED;
+                if (height > 1)
+                    room.tiles[height - 2][j] = FLOOR;
+            }
         }
     }
 
-    // Left
+
     if (room.exitLeft)
     {
         for (int dy = -1; dy <= 1; ++dy)
         {
             int i = mid + dy;
             if (i >= 0 && i < height)
-                room.tiles[i][0] = FLOOR, room.tiles[i][1] = FLOOR;
+            {
+                room.tiles[i][0] = LOCKED;
+                if (width > 1)
+                    room.tiles[i][1] = FLOOR;
+            }
         }
     }
 
-    // Right
+   
     if (room.exitRight)
     {
         for (int dy = -1; dy <= 1; ++dy)
         {
             int i = mid + dy;
             if (i >= 0 && i < height)
-                room.tiles[i][width - 1] = FLOOR, room.tiles[i][width - 2] = FLOOR;
+            {
+                room.tiles[i][width - 1] = LOCKED;
+                if (width > 1)
+                    room.tiles[i][width - 2] = FLOOR;
+            }
         }
     }
 }
