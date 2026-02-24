@@ -561,11 +561,12 @@ foundDoor:
 			int oldY = m_currentRoom.y;
 			m_currentRoom = m_nextRoom;  //switch to the next room
 
-			for (auto& z : m_zombies)
-				z.setFrozen(true);
+			//for (auto& z : m_zombies)
+				//z.setFrozen(true);
 
-			spawnZombiesForRoom();
+			//spawnZombiesForRoom();
 
+			loadRoomState();
 
 			m_visitedRooms[m_currentRoom.y][m_currentRoom.x] = true;  //mark room as visited
 
@@ -622,6 +623,9 @@ foundDoor:
 		//if newRoom changed player endered the door
 		if (newRoom != m_currentRoom)
 		{
+			// Save current room state before leaving
+			saveCurrentRoomState();
+			
 			m_transitionState = TransitionState::Sliding;
 			m_nextRoom = newRoom;
 
@@ -639,11 +643,20 @@ foundDoor:
 
 void Game::spawnZombiesForRoom()
 {
+	// Check if zombies spawned for this room
+	auto roomKey = std::make_pair(m_currentRoom.x, m_currentRoom.y);
+	
+	if (m_roomZombies.find(roomKey) != m_roomZombies.end())
+	{
+		return;
+	}
+
+	// First time visiting - spawn new zombies
 	m_zombies.clear();
 
 	const auto& room = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
 
-	// Decide count based on room type
+
 	int count = 0;
 
 	switch (room.type)
@@ -682,8 +695,50 @@ void Game::spawnZombiesForRoom()
 		m_zombies[idx].setHasKey(true);
 		std::cout << "Assigned key to zombie " << idx << "\n";
 	}
+
+	// Store the initial zombie state for this room
+	m_roomZombies[roomKey] = m_zombies;
 }
 
+void Game::saveCurrentRoomState()
+{
+	auto roomKey = std::make_pair(m_currentRoom.x, m_currentRoom.y);
+	
+	// Save current zombies (including dead ones removed)
+	m_roomZombies[roomKey] = m_zombies;
+	
+	// Save current keys
+	m_roomKeys[roomKey] = m_keys;
+	
+	std::cout << "Saved room (" << m_currentRoom.x << "," << m_currentRoom.y << ") with " << m_zombies.size() << " zombies\n";
+}
+
+void Game::loadRoomState()
+{
+	auto roomKey = std::make_pair(m_currentRoom.x, m_currentRoom.y);
+	
+	// Load zombies for this room
+	if (m_roomZombies.find(roomKey) != m_roomZombies.end())
+	{
+		m_zombies = m_roomZombies[roomKey];
+		std::cout << "Loaded room (" << m_currentRoom.x << "," << m_currentRoom.y << ") with " << m_zombies.size() << " zombies\n";
+	}
+	else
+	{
+		// First time visiting - spawn new zombies
+		spawnZombiesForRoom();
+	}
+	
+	// Load keys if they exist for this room
+	if (m_roomKeys.find(roomKey) != m_roomKeys.end())
+	{
+		m_keys = m_roomKeys[roomKey];
+	}
+	else
+	{
+		m_keys.clear();
+	}
+}
 
 sf::Vector2f Game::findSafeSpawn(const MapGenerator::Room& room)
 {

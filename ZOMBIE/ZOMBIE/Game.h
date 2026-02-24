@@ -10,6 +10,7 @@
 #include "MapGenerator.h"
 #include "Zombie.h"
 #include <vector>
+#include <map>
 #include "Bullet.h"
 
 class Game
@@ -57,6 +58,8 @@ private:
 	sf::Vector2f getDoorSpawn(const MapGenerator::Room& room,
 		int dirX, int dirY);
 	void spawnZombiesForRoom();
+	void saveCurrentRoomState();
+	void loadRoomState();
 
 	Player m_player;
 	MapGenerator m_mapGenerator;
@@ -68,6 +71,9 @@ private:
 
 	std::vector<Zombie> m_zombies;
 	sf::Texture m_zombieTexture;
+
+	// Store zombies per room using room coordinates as key
+	std::map<std::pair<int, int>, std::vector<Zombie>> m_roomZombies;
 
 	sf::RenderWindow m_window; // main SFML window
 	bool m_exitGame{ false }; // control exiting game
@@ -92,6 +98,9 @@ private:
 	std::vector<Key> m_keys;
 	bool m_playerHasKey{ false };
 
+	// Store keys per room
+	std::map<std::pair<int, int>, std::vector<Key>> m_roomKeys;
+
 	// unlocking progress
 	float m_unlockHoldTimer{ 0.f };
 	const float m_unlockHoldRequired{ 5.f };
@@ -100,6 +109,6 @@ private:
 	int m_unlockTargetDirX{ 0 };
 	int m_unlockTargetDirY{ 0 };
 
-	// debug / UX: show when player is near a locked door (set in update, read in render)
+
 	bool m_debugNearLockedDoor{ false };
 };
