@@ -62,6 +62,11 @@ Game::Game() :
 	m_healthBarFront.setFillColor(sf::Color(200, 0, 0));
 	m_healthBarFront.setPosition(700.f, 20.f);
 
+	if (!m_keyTexture.loadFromFile("ASSETS/IMAGES/key.png"))
+	{
+		std::cout << "Failed to load key spritesheet\n";
+	}
+
 }
 
 Game::~Game()
@@ -226,8 +231,11 @@ void Game::update(sf::Time t_deltaTime)
 		{
 			if (m_zombies[i].hasKey())
 			{
-				// spawn key at zombie position
-				m_keys.emplace_back(m_zombies[i].getPosition());
+				// spawn animated key at zombie position
+				Key newKey(m_zombies[i].getPosition());
+				newKey.sprite.setTexture(m_keyTexture);
+				newKey.sprite.setTextureRect(sf::IntRect(0, 0, static_cast<int>(m_keyFrameWidth), 47));
+				m_keys.push_back(newKey);
 			}
 
 			m_zombies.erase(m_zombies.begin() + i);
@@ -300,6 +308,30 @@ void Game::update(sf::Time t_deltaTime)
 			}
 		}
 
+	}
+
+	//Animate keys
+	for (auto& key : m_keys)
+	{
+		if (key.picked) continue;
+		
+		key.frameTimer += t_deltaTime.asSeconds();
+		
+		// Switch to next frame when timer exceeds frame time
+		if (key.frameTimer >= m_keyFrameTime)
+		{
+			key.frameTimer = 0.f;
+			key.currentFrame = (key.currentFrame + 1) % m_keyFrameCount;
+			
+			// Update texture rect for current frame
+			sf::IntRect frameRect(
+				static_cast<int>(key.currentFrame * m_keyFrameWidth), 
+				0, 
+				static_cast<int>(m_keyFrameWidth), 
+				47  // height of spritesheet
+			);
+			key.sprite.setTextureRect(frameRect);
+		}
 	}
 
 	// handle key pickup by player
@@ -978,12 +1010,12 @@ void Game::render()
 		m_window.draw(hb);
 	}
 
-	// draw dropped keys
+	// draw dropped keys with animation
 	for (const auto& key : m_keys)
 	{
 		if (!key.picked)
 		{
-			m_window.draw(key.shape);
+			m_window.draw(key.sprite);
 		}
 	}
 
@@ -1025,8 +1057,8 @@ void Game::render()
 		m_window.draw(t);
 	}
 
-	// draw unlock progress if active
 	
+
 
 	// draw unlock hint if near door and has key
 	m_window.setView(m_window.getDefaultView());

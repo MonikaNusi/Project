@@ -83,20 +83,26 @@ private:
 	{
 		sf::Vector2f pos;
 		bool picked{ false };
-		sf::RectangleShape shape;
+		sf::Sprite sprite;           
+		int currentFrame{ 0 };    
+		float frameTimer{ 0.f };
+
 		Key() = default;
 		Key(sf::Vector2f p)
 			: pos(p)
 		{
-			shape.setSize({ 18.f, 18.f });
-			shape.setOrigin({ 9.f, 9.f });
-			shape.setPosition(p);
-			shape.setFillColor(sf::Color::Yellow);
+			sprite.setOrigin({ 9.f, 9.f });
+			sprite.setPosition(p);
 		}
 	};
 
 	std::vector<Key> m_keys;
 	bool m_playerHasKey{ false };
+
+	sf::Texture m_keyTexture;
+	const int m_keyFrameCount{ 27 };
+	const float m_keyFrameWidth{ 21.f };
+	const float m_keyFrameTime{ 0.05f };
 
 	// Store keys per room
 	std::map<std::pair<int, int>, std::vector<Key>> m_roomKeys;
