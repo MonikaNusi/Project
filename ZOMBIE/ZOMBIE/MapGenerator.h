@@ -11,7 +11,6 @@ public:
         enum class RoomType { Empty, Normal, Treasure, Trap, Boss, Start };
 
         bool active = false;
-        //int type = 0;
         RoomType type = RoomType::Empty;
 
         sf::Color color = sf::Color(50, 50, 50);
@@ -31,9 +30,13 @@ public:
 
     const sf::Texture& getWallTexture() const { return m_wallTexture; }
     const sf::Texture& getFloorTexture() const { return m_floorTexture; }
+    const sf::Texture& getTilesetTexture() const { return m_tilesetTexture; }
 
     // Runtime tile modification
     void setTile(int roomX, int roomY, int tileX, int tileY, int value);
+
+    // NEW: Autotiling helper
+    sf::IntRect getTileTextureRect(const Room& room, int tileX, int tileY) const;
 
 private:
 
@@ -44,6 +47,7 @@ private:
 
     sf::Texture m_wallTexture;
     sf::Texture m_floorTexture;
+    sf::Texture m_tilesetTexture;  // NEW: Main tileset with all variations
 
     bool isPathValid(const sf::Vector2i& start, const sf::Vector2i& goal) const;
 
@@ -51,4 +55,8 @@ private:
     sf::RectangleShape m_roomShape;
 
     void generateRoomLayout(Room& room);
+    
+    // NEW: Autotiling helper methods
+    bool isWall(const Room& room, int x, int y) const;
+    int countNeighborWalls(const Room& room, int x, int y) const;
 };

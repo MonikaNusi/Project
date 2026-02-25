@@ -11,16 +11,19 @@ MapGenerator::MapGenerator(int roomsX, int roomsY, int roomSize)
     m_rooms.resize(m_roomsY, std::vector<Room>(m_roomsX));
     m_roomShape.setSize(sf::Vector2f((float)m_roomSize, (float)m_roomSize));
 
+    if (!m_tilesetTexture.loadFromFile("ASSETS/IMAGES/tileset.png"))
+        std::cout << "Failed to load tileset texture\n";
+    
+    m_tilesetTexture.setSmooth(false);
+
+    
     if (!m_wallTexture.loadFromFile("ASSETS/IMAGES/wall.png"))
         std::cout << "Failed to load wall texture\n";
     if (!m_floorTexture.loadFromFile("ASSETS/IMAGES/floor.png"))
         std::cout << "Failed to load floor texture\n";
 
-
     m_wallTexture.setRepeated(true);
     m_floorTexture.setRepeated(true);
-
-
 }
 
 const MapGenerator::Room& MapGenerator::getRoom(int x, int y) const
@@ -38,28 +41,117 @@ void MapGenerator::setTile(int roomX, int roomY, int tileX, int tileY, int value
     r.tiles[tileY][tileX] = value;
 }
 
+//Check if a tile position is a wall
+bool MapGenerator::isWall(const Room& room, int x, int y) const
+{
+    if (x < 0 || y < 0 || x >= Room::width || y >= Room::height)
+        return true; // treat out of bounds as walls
+    
+    return room.tiles[y][x] == 1 || room.tiles[y][x] == 2; // wall or locked door
+}
+
+//Count how many neighboring tiles are walls
+int MapGenerator::countNeighborWalls(const Room& room, int x, int y) const
+{
+    int count = 0;
+    
+    // Check 8 directions
+    for (int dy = -1; dy <= 1; ++dy)
+    {
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+            if (dx == 0 && dy == 0) continue; // skip center
+            
+            if (isWall(room, x + dx, y + dy))
+                count++;
+        }
+    }
+    
+    return count;
+}
+
+// Determine which tile texture to use based on neighbors
+sf::IntRect MapGenerator::getTileTextureRect(const Room& room, int tileX, int tileY) const
+{
+    const int TILE_SIZE = 16; // Base tile size
+    
+    int value = room.tiles[tileY][tileX];
+    
+    // floor tiles
+    if (value == 0)
+    {
+        return sf::IntRect(32, 32, 16, 16);
+    }
+    
+    //locked door tiles
+    if (value == 2)
+    {
+        return sf::IntRect(31, 11, 16, 16);
+    }
+    
+    //wall tiles
+    bool isTopEdge = (tileY == 0);
+    bool isBottomEdge = (tileY == Room::height - 1);
+    bool isLeftEdge = (tileX == 0);
+    bool isRightEdge = (tileX == Room::width - 1);
+    
+    // corners
+    if (isTopEdge && isLeftEdge)
+    {
+        return sf::IntRect(0, 11, 16, 16); // top-left corner
+    }
+    
+    if (isTopEdge && isRightEdge)
+    {
+        return sf::IntRect(48, 11, 16, 16); // top-right corner
+    }
+    
+    // top edge walls
+    if (isTopEdge)
+    {
+        return sf::IntRect(15, 11, 16, 16); // top wall tile
+    }
+    
+    //lest side wall
+    if (isLeftEdge)
+    {
+        return sf::IntRect(0, 14, 16, 16); // left wall tile
+    }
+    
+    // right side wall
+    if (isRightEdge)
+    {
+        return sf::IntRect(47, 16, 16, 16); // right wall tile
+    }
+    
+    // bottom edge wall
+    if (isBottomEdge)
+    {
+        return sf::IntRect(15, 11, 16, 16);
+    }
+    
+    return sf::IntRect(80, 47, 16, 16);
+}
 
 // Generate the layout of rooms
 void MapGenerator::generate()
 {
     // Reset all rooms
-    for (int y = 0; y < m_roomsY; ++y) //loop through each row
-        for (int x = 0; x < m_roomsX; ++x) //loop through each column
-            m_rooms[y][x] = Room(); //reset all the roooms
+    for (int y = 0; y < m_roomsY; ++y)
+        for (int x = 0; x < m_roomsX; ++x)
+            m_rooms[y][x] = Room();
 
     //Build guaranteed downward path (main shaft)
     int startX = std::rand() % m_roomsX;
-    int startY = 0;   //alway star from top row
+    int startY = 0;
     int x = startX;
     int y = startY;
 
-    m_rooms[y][x].active = true;  //starting room active
+    m_rooms[y][x].active = true;
 
-
-    //path that always reaches the bottom of the grid
     while (y < m_roomsY - 1) 
     {
-        int move = std::rand() % 3; // 0=left, 1=right, 2=down
+        int move = std::rand() % 3;
         if (move == 0 && x > 0)
             x--; 
         else if (move == 1 && x < m_roomsX - 1)
@@ -124,7 +216,6 @@ void MapGenerator::generate()
             if (!m_rooms[ny][nx].active || dist[ny][nx] != -1)
                 continue;
 
-            // must have matching exits both ways
             if (d.x == 1 && !(r.exitRight && m_rooms[ny][nx].exitLeft)) continue;
             if (d.x == -1 && !(r.exitLeft && m_rooms[ny][nx].exitRight)) continue;
             if (d.y == 1 && !(r.exitDown && m_rooms[ny][nx].exitUp)) continue;
@@ -201,19 +292,17 @@ void MapGenerator::generate()
     }
 }
 
-// generate a 10×10 grid for a single room
 void MapGenerator::generateRoomLayout(Room& room)
 {
     const int WALL = 1;
     const int FLOOR = 0;
-    const int LOCKED = 2; // new: locked door tile
+    const int LOCKED = 2;
     int width = Room::width;
     int height = Room::height;
 
-    //10x10 grid filled with floor
     room.tiles.resize(height, std::vector<int>(width, FLOOR));
 
-    //loop through grid
+    // First pass: borders and random interior
     for (int i = 0; i < height; i++)
     {
         for (int j = 0; j < width; j++)
@@ -230,7 +319,7 @@ void MapGenerator::generateRoomLayout(Room& room)
     //middle tile for door carving
     int mid = width / 2;
 
-    // If room has exit Up - mark only the edge tile locked and ensure inner tile is floor
+    // Clear areas around doors to prevent blocking
     if (room.exitUp)
     {
         for (int dx = -1; dx <= 1; ++dx) //door 3 tiles wide
@@ -239,14 +328,15 @@ void MapGenerator::generateRoomLayout(Room& room)
             if (j >= 0 && j < width)
             {
                 room.tiles[0][j] = LOCKED;
-                // ensure tile just inside the room is floor (so locked barrier is single-tile thick)
+                // Clear 2 tiles deep to ensure access
                 if (height > 1)
                     room.tiles[1][j] = FLOOR;
+                if (height > 2)
+                    room.tiles[2][j] = FLOOR;
             }
         }
     }
 
-    
     if (room.exitDown)
     {
         for (int dx = -1; dx <= 1; ++dx)
@@ -257,10 +347,11 @@ void MapGenerator::generateRoomLayout(Room& room)
                 room.tiles[height - 1][j] = LOCKED;
                 if (height > 1)
                     room.tiles[height - 2][j] = FLOOR;
+                if (height > 2)
+                    room.tiles[height - 3][j] = FLOOR;
             }
         }
     }
-
 
     if (room.exitLeft)
     {
@@ -272,11 +363,12 @@ void MapGenerator::generateRoomLayout(Room& room)
                 room.tiles[i][0] = LOCKED;
                 if (width > 1)
                     room.tiles[i][1] = FLOOR;
+                if (width > 2)
+                    room.tiles[i][2] = FLOOR;
             }
         }
     }
 
-   
     if (room.exitRight)
     {
         for (int dy = -1; dy <= 1; ++dy)
@@ -287,6 +379,8 @@ void MapGenerator::generateRoomLayout(Room& room)
                 room.tiles[i][width - 1] = LOCKED;
                 if (width > 1)
                     room.tiles[i][width - 2] = FLOOR;
+                if (width > 2)
+                    room.tiles[i][width - 3] = FLOOR;
             }
         }
     }

@@ -594,26 +594,26 @@ foundDoor:
 	{
 		sf::Vector2i newRoom = m_currentRoom; //start with the current room
 
-		//player is at right edge and this room has a right exit AND the door tile is NOT locked
+		//player is at right edge and this room has a right exit and the door tile is not locked
 		if (center.x > windowW - margin && current.exitRight)
 		{
-			// Check the border tile for locked status (locked tile value == 2)
+			// Check the border tile for locked status
 			if (current.tiles[midY][current.width - 1] == 0)
 				newRoom.x++;
 		}
-		//player is at left edge and this room has a left exit AND not locked
+		//player is at left edge and this room has a left exit and not locked
 		else if (center.x < margin && current.exitLeft)
 		{
 			if (current.tiles[midY][0] == 0)
 				newRoom.x--;
 		}
-		//player is at bottom edge and this room has a down exit AND not locked
+		//player is at bottom edge and this room has a down exit and not locked
 		else if (center.y > windowH - margin && current.exitDown)
 		{
 			if (current.tiles[current.height - 1][midX] == 0)
 				newRoom.y++;
 		}
-		//player is at top edge and this room has an up exit AND not locked
+		//player is at top edge and this room has an up exit and not locked
 		else if (center.y < margin && current.exitUp)
 		{
 			if (current.tiles[0][midX] == 0)
@@ -752,7 +752,7 @@ sf::Vector2f Game::findSafeSpawn(const MapGenerator::Room& room)
 	int cx = room.width / 2;
 	int cy = room.height / 2;
 
-	if (room.tiles[cy][cx] == 0) //FLOOR
+	if (room.tiles[cy][cx] == 0) //floor
 	{
 		return {
 			cx * tileW + tileW * 0.5f,
@@ -852,49 +852,45 @@ void Game::render()
 
 	auto drawRoom = [&](const MapGenerator::Room& room, sf::Vector2f offset)
 	{
-
-		float tileW = static_cast<float>(windowW) / room.width;
-		float tileH = static_cast<float>(windowH) / room.height;
-		sf::RectangleShape tile(sf::Vector2f(tileW, tileH));
-		
-		for (int i = 0; i < room.height; ++i)
-		{
-			for (int j = 0; j < room.width; ++j)
-			{
-
-				tile.setPosition(offset.x + j * tileW, offset.y + i * tileH);
-
-				const int texSize = 16;
-				int repeatX = static_cast<int>(std::ceil(tileW / texSize));
-				int repeatY = static_cast<int>(std::ceil(tileH / texSize));
-			
-				if (repeatX < 1) repeatX = 1;
-				if (repeatY < 1) repeatY = 1;
-
-				if (room.tiles[i][j] == 1) // wall
-				{
-					//tile.setTexture(&m_mapGenerator.getWallTexture());
-					//tile.setTextureRect(sf::IntRect(0, 0, texSize * repeatX, texSize * repeatY));
-					tile.setFillColor(sf::Color(40, 40, 40));
-				}
-				else if (room.tiles[i][j] == 2) // locked door
-				{
-					// Draw locked doors in a different color so player can see them
-					tile.setFillColor(sf::Color(100, 60, 180));
-				}
-				else // floor
-				{
-					tile.setFillColor(sf::Color(200, 200, 200));
-					//tile.setTexture(&m_mapGenerator.getFloorTexture());
-					//tile.setTextureRect(sf::IntRect(0, 0, texSize * repeatX, texSize * repeatY));
-				}
-
-				m_window.draw(tile);
-			}
-		}
-
-
+	    float tileW = static_cast<float>(windowW) / room.width;
+	    float tileH = static_cast<float>(windowH) / room.height;
+	    
+	
+	    sf::Sprite tileSprite;
+	    tileSprite.setTexture(m_mapGenerator.getTilesetTexture());
+	    
+	    for (int i = 0; i < room.height; ++i)
+	    {
+	        for (int j = 0; j < room.width; ++j)
+	        {
+	            // Get the appropriate texture rect based on tile neighbors
+	            sf::IntRect texRect = m_mapGenerator.getTileTextureRect(room, j, i);
+	            
+	            tileSprite.setTextureRect(texRect);
+	            
+	            // Position the sprite
+	            tileSprite.setPosition(offset.x + j * tileW, offset.y + i * tileH);
+	            
+	            // Scale sprite to fit tile size
+	            float scaleX = tileW / texRect.width;
+	            float scaleY = tileH / texRect.height;
+	            tileSprite.setScale(scaleX, scaleY);
+	            
+	            
+	            if (room.tiles[i][j] == 2) // locked door
+	            {
+	                tileSprite.setColor(sf::Color(200, 160, 255)); // purple tint for visibility
+	            }
+	            else
+	            {
+	                tileSprite.setColor(sf::Color::White); // normal rendering
+	            }
+	            
+	            m_window.draw(tileSprite);
+	        }
+	    }
 	};
+
 
 	// draw current room
 	drawRoom(m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y), { 0.f, 0.f });
