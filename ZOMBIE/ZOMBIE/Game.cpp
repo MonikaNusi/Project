@@ -227,7 +227,8 @@ void Game::update(sf::Time t_deltaTime)
 	// Handle dead zombies and spawn dropped keys
 	for (size_t i = 0; i < m_zombies.size(); )
 	{
-		if (m_zombies[i].isDead())
+		// Check if death animation is complete
+		if (m_zombies[i].isDeathAnimationComplete())
 		{
 			if (m_zombies[i].hasKey())
 			{
@@ -236,6 +237,7 @@ void Game::update(sf::Time t_deltaTime)
 				newKey.sprite.setTexture(m_keyTexture);
 				newKey.sprite.setTextureRect(sf::IntRect(0, 0, static_cast<int>(m_keyFrameWidth), 47));
 				m_keys.push_back(newKey);
+				std::cout << "Spawned key from dead zombie\n";
 			}
 
 			m_zombies.erase(m_zombies.begin() + i);

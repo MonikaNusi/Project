@@ -5,20 +5,22 @@
 class Zombie
 {
 public:
-    enum class State
+     enum class State
     {
         Idle,
         Patrol,
         Chase,
         Attack,
-        Cooldown
+        Cooldown,
+        Dying
     };
 
 
     enum class Anim
     {
         Walk,
-        Attack
+        Attack,
+        Death
     };
 
     enum class Facing
@@ -55,7 +57,8 @@ public:
     void setFrozen(bool frozen);
 
     void takeDamage(int dmg); 
-    bool isDead() const { return m_health <= 0; }
+    bool isDead() const { return m_health <= 0 && m_state != State::Dying; } 
+    bool isDeathAnimationComplete() const { return m_deathAnimComplete; }
 
     int tryDealDamage(const sf::FloatRect& playerHitbox);
 
@@ -133,6 +136,8 @@ private:
     sf::Texture m_attackUpTex;
     sf::Texture m_attackSideTex;
 
+    sf::Texture m_deathTex; 
+
     float m_separationRadius = 50.f;
     float m_separationStrength = 40.f;
 
@@ -151,6 +156,9 @@ private:
     float m_maxSearchTime = 2.5f;
 
     bool m_hasKey{ false };
+
+    bool m_deathAnimComplete{ false };
+    static const int m_deathFrameCount = 8;
 
 };
 

@@ -35,6 +35,12 @@ Zombie::Zombie(const sf::Texture& texture)
     m_attackSideTex.loadFromFile("ASSETS/IMAGES/ZombieSideAttack.png");
     m_attackSideTex.setSmooth(false);
 
+    if (!m_deathTex.loadFromFile("ASSETS/IMAGES/ZombieDeath.png"))
+    {
+        std::cout << "Failed to load zombie death animation\n";
+    }
+    m_deathTex.setSmooth(false);
+
 
     m_healthBarBack.setFillColor(sf::Color(80, 0, 0));
     m_healthBarBack.setOutlineThickness(1.f);
@@ -74,6 +80,12 @@ void Zombie::takeDamage(int dmg)
 {
     m_health -= dmg;
     if (m_health < 0) m_health = 0;
+    
+    // death animation when health reaches 0
+    if (m_health <= 0 && m_state != State::Dying)
+    {
+        setState(State::Dying);
+    }
 }
 
 void Zombie::setState(State newState)
@@ -117,6 +129,16 @@ void Zombie::setState(State newState)
             m_frameTimer = 0.f;
         }
     }
+    //Handle death state
+    else if (newState == State::Dying)
+    {
+        m_anim = Anim::Death;
+        m_frameIndex = 0;
+        m_frameTimer = 0.f;
+        m_velocity = { 0.f, 0.f };  // Stop movement
+        m_deathAnimComplete = false;
+        std::cout << "[Zombie] Starting death animation\n";
+    }
 
 
 }
@@ -127,6 +149,13 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
     float tileH,
     const std::vector<Zombie*>& zombies)
 {
+
+    if (m_state == State::Dying)
+    {
+        animate(dt);
+        return;
+    }
+
     if (m_frozen)
         return;
 
@@ -388,6 +417,9 @@ void Zombie::render(sf::RenderWindow& window)
 {
     window.draw(m_sprite);
 
+    if (m_state == State::Dying || m_deathAnimComplete)
+        return;
+
     // Draw health bar above head
     sf::FloatRect b = m_sprite.getGlobalBounds();
 
@@ -428,6 +460,10 @@ sf::FloatRect Zombie::getHitbox() const
 
 int Zombie::tryDealDamage(const sf::FloatRect& playerHitbox)
 {
+    // Can't deal damage when dying
+    if (m_state == State::Dying)
+        return 0;
+
     if (m_state == State::Attack && !m_hasDealtDamageThisAttack)
     {
         if (getHitbox().intersects(playerHitbox))
@@ -456,6 +492,8 @@ void Zombie::reset(sf::Vector2f spawnPos)
     m_health = m_maxHealth;
 
     m_hasKey = false;
+
+    m_deathAnimComplete = false;
 }
 
 void Zombie::updateFacing(sf::Vector2f dir)
@@ -499,7 +537,7 @@ void Zombie::animate(sf::Time dt)
             m_sprite.setScale(sign * m_baseScale, m_baseScale);
         }
     }
-    else // ATTACK
+    else if (m_anim == Anim::Attack)
     {
         m_frameIndex = std::min(m_frameIndex + 1, 14);
 
@@ -528,6 +566,21 @@ void Zombie::animate(sf::Time dt)
             m_sprite.setScale(sign * m_baseScale, m_baseScale);
         }
     }
+    //death animation
+    else if (m_anim == Anim::Death)
+    {
+        if (m_frameIndex >= m_deathFrameCount)
+        {
+            m_frameIndex = m_deathFrameCount - 1;  // Stay on last frame
+            m_deathAnimComplete = true;
+            std::cout << "[Zombie] Death animation complete\n";
+            return;
+        }
+
+        m_sprite.setTexture(m_deathTex);
+        m_sprite.setTextureRect({ m_frameIndex * 29, 0, 29, 24 });
+        m_sprite.setScale(m_baseScale, m_baseScale);
+    }
 }
 
 // Key accessors
@@ -540,5 +593,6 @@ bool Zombie::hasKey() const
 {
     return m_hasKey;
 }
+
 
 
