@@ -913,7 +913,7 @@ void Game::render()
 	            
 	            if (room.tiles[i][j] == 2) // locked door
 	            {
-	                tileSprite.setColor(sf::Color(200, 160, 255)); // purple tint for visibility
+	                //tileSprite.setColor(sf::Color(200, 160, 255));
 	            }
 	            else
 	            {

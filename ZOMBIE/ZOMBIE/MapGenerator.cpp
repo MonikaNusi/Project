@@ -77,16 +77,46 @@ sf::IntRect MapGenerator::getTileTextureRect(const Room& room, int tileX, int ti
     
     int value = room.tiles[tileY][tileX];
     
-    // floor tiles
+    // floor tiles - 3 variations
     if (value == 0)
     {
-        return sf::IntRect(32, 32, 16, 16);
+        int seed = tileX * 1000 + tileY;
+        int variant = (seed * 2654435761) % 3;
+        
+        switch (variant)
+        {
+            case 0: return sf::IntRect(32, 63, 32, 32); 
+            case 1: return sf::IntRect(64, 63, 32, 32);  
+            case 2: return sf::IntRect(80, 80, 32, 32); 
+            case 3: return sf::IntRect(64, 63, 32, 32); 
+            default: return sf::IntRect(80, 63, 32, 32);
+        }
     }
     
-    //locked door tiles
+    //locked door tiles check which type based on position
     if (value == 2)
     {
-        return sf::IntRect(31, 11, 16, 16);
+        int midX = Room::width / 2;
+        int midY = Room::height / 2;
+        
+        if (tileX == 0)
+        {
+            // Left side door
+            return sf::IntRect(19, 170, 32, 32);
+        }
+        else if (tileX == Room::width - 1)
+        {
+            // Right side door
+            return sf::IntRect(37, 170, 32, 32);
+        }
+        else if (tileY == 0 || tileY == Room::height - 1)
+        {
+            // Front/back door
+            return sf::IntRect(84, 170, 32, 32);
+        }
+        
+        // generic locked door
+        return sf::IntRect(7, 81, 32, 27);
     }
     
     //wall tiles
@@ -98,39 +128,39 @@ sf::IntRect MapGenerator::getTileTextureRect(const Room& room, int tileX, int ti
     // corners
     if (isTopEdge && isLeftEdge)
     {
-        return sf::IntRect(0, 11, 16, 16); // top-left corner
+        return sf::IntRect(0, 0, 32, 32); // top-left corner
     }
     
     if (isTopEdge && isRightEdge)
     {
-        return sf::IntRect(48, 11, 16, 16); // top-right corner
+        return sf::IntRect(160, 0, 32, 32); // top-right corner
     }
     
     // top edge walls
     if (isTopEdge)
     {
-        return sf::IntRect(15, 11, 16, 16); // top wall tile
+        return sf::IntRect(31, 0, 32, 32); // top wall tile
     }
     
-    //lest side wall
+    //left side wall
     if (isLeftEdge)
     {
-        return sf::IntRect(0, 14, 16, 16); // left wall tile
+        return sf::IntRect(0, 8, 32, 32); // left wall tile
     }
     
     // right side wall
     if (isRightEdge)
     {
-        return sf::IntRect(47, 16, 16, 16); // right wall tile
+        return sf::IntRect(160, 6, 32, 32); // right wall tile
     }
     
     // bottom edge wall
     if (isBottomEdge)
     {
-        return sf::IntRect(15, 11, 16, 16);
+        return sf::IntRect(32, 128, 32, 32);
     }
     
-    return sf::IntRect(80, 47, 16, 16);
+    return sf::IntRect(288, 63, 32, 32);
 }
 
 // Generate the layout of rooms
