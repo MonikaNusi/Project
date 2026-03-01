@@ -25,6 +25,7 @@ public:
 	void takeDamage(int dmg);
 	int getHealth() const { return m_health; }
 	int getMaxHealth() const { return m_maxHealth; }
+    void heal(int amount);
 
 private:
 	sf::Sprite m_sprite;

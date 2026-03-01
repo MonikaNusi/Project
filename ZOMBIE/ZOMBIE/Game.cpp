@@ -67,6 +67,49 @@ Game::Game() :
 		std::cout << "Failed to load key spritesheet\n";
 	}
 
+	if (!m_spikeTrapTexture.loadFromFile("ASSETS/IMAGES/trap.png"))
+	{
+		std::cout << "Failed to load spike trap texture\n";
+	}
+	m_spikeTrapTexture.setSmooth(false);
+
+
+	if (!m_healthChestClosedTexture.loadFromFile("ASSETS/IMAGES/chestclosed.png"))
+	{
+		std::cout << "Failed to load health chest closed texture\n";
+	}
+	m_healthChestClosedTexture.setSmooth(false);
+
+	if (!m_healthChestOpenTexture.loadFromFile("ASSETS/IMAGES/chestopen.png"))
+	{
+		std::cout << "Failed to load health chest open texture\n";
+	}
+	m_healthChestOpenTexture.setSmooth(false);
+
+	if (!m_ammoChestClosedTexture.loadFromFile("ASSETS/IMAGES/chestclosed.png"))
+	{
+		std::cout << "Failed to load ammo chest closed texture\n";
+	}
+	m_ammoChestClosedTexture.setSmooth(false);
+
+	if (!m_ammoChestOpenTexture.loadFromFile("ASSETS/IMAGES/chestopen.png"))
+	{
+		std::cout << "Failed to load ammo chest open texture\n";
+	}
+	m_ammoChestOpenTexture.setSmooth(false);
+
+	if (!m_healthPotionTexture.loadFromFile("ASSETS/IMAGES/health.png"))
+	{
+		std::cout << "Failed to load health potion texture\n";
+	}
+	m_healthPotionTexture.setSmooth(false);
+
+	if (!m_ammoCrateTexture.loadFromFile("ASSETS/IMAGES/ammo.png"))
+	{
+		std::cout << "Failed to load ammo crate texture\n";
+	}
+	m_ammoCrateTexture.setSmooth(false);
+
 }
 
 Game::~Game()
@@ -312,6 +355,116 @@ void Game::update(sf::Time t_deltaTime)
 
 	}
 
+	// Update spike traps
+	for (auto& trap : m_spikeTraps)
+	{
+		trap.update(t_deltaTime);
+
+		// Check collision with player
+		if (trap.getBounds().intersects(playerBox))
+		{
+			if (!trap.isActive())
+			{
+				trap.trigger();
+				m_player.takeDamage(trap.getDamage());
+				std::cout << "Player hit spike trap! Health: " << m_player.getHealth() << "\n";
+			}
+		}
+	}
+
+	// Update pickups
+	for (auto& pickup : m_pickups)
+	{
+		pickup.update(t_deltaTime);
+
+		// health and ammo chests
+		if (!pickup.isOpened() && !pickup.isPicked())
+		{
+			if (pickup.isNearby(playerBox, 60.f))
+			{
+				// Player is near chest check for E key
+				if (sf::Keyboard::isKeyPressed(sf::Keyboard::E))
+				{
+					pickup.open();
+					
+					// Create dropped item instead
+					DroppedItem::Type itemType = (pickup.getType() == Pickup::Type::Health) 
+						? DroppedItem::Type::Health 
+						: DroppedItem::Type::Ammo;
+					
+					// Calculate spawn position
+					sf::Vector2f chestPos = pickup.getPosition();
+					sf::Vector2f itemSpawnPos = chestPos;
+					itemSpawnPos.y -= 100.f;
+					
+					DroppedItem item(itemType, pickup.getValue(), itemSpawnPos);
+					
+					// Set appropriate texture
+					if (itemType == DroppedItem::Type::Health)
+					{
+						item.sprite.setTexture(m_healthPotionTexture);
+					}
+					else
+					{
+						item.sprite.setTexture(m_ammoCrateTexture);
+					}
+					
+					// Setup sprite
+					item.sprite.setPosition(itemSpawnPos);
+					item.sprite.setOrigin(
+						item.sprite.getTexture()->getSize().x / 2.f,
+						item.sprite.getTexture()->getSize().y / 2.f
+					);
+					item.sprite.setScale(2.f, 2.f);
+					
+					m_droppedItems.push_back(item);
+					
+					std::cout << "Opened chest! Item dropped at (" << itemSpawnPos.x << ", " << itemSpawnPos.y << ")\n";
+				}
+			}
+		}
+	}
+
+
+	// Update and handle dropped items
+	for (auto& item : m_droppedItems)
+	{
+		if (item.picked) continue;
+		
+		// Bobbing animation
+		item.bobTimer += t_deltaTime.asSeconds() * 2.f;
+		float offset = std::sin(item.bobTimer) * 5.f;
+		sf::Vector2f pos = item.sprite.getPosition();
+		pos.y = item.baseY + offset;
+		item.sprite.setPosition(pos);
+		
+		// Check pickup
+		sf::FloatRect itemRect = item.sprite.getGlobalBounds();
+		if (itemRect.intersects(playerBox))
+		{
+			item.picked = true;
+			
+			if (item.type == DroppedItem::Type::Health)
+			{
+				m_player.heal(item.value);
+				std::cout << "Picked up health potion! +" << item.value << " HP\n";
+			}
+			else
+			{
+				m_player.addAmmo(item.value);
+				std::cout << "Picked up ammo! +" << item.value << "\n";
+			}
+		}
+	}
+
+	// Remove picked items
+	m_droppedItems.erase(
+		std::remove_if(m_droppedItems.begin(), m_droppedItems.end(),
+			[](const DroppedItem& i) { return i.picked; }),
+		m_droppedItems.end()
+	);
+
+
 	//Animate keys
 	for (auto& key : m_keys)
 	{
@@ -460,7 +613,7 @@ foundDoor:
 				m_unlockTargetDirX = doorDirX;
 				m_unlockTargetDirY = doorDirY;
 				m_unlockHoldTimer = 0.f;
-				std::cout << "Started unlocking door at (" << doorDirX << "," << doorDirY << ")\n";
+				std::cout << "Started unlocking door at (" << doorRoomX << "," << doorRoomY << ")\n";
 			}
 			else
 			{
@@ -741,6 +894,15 @@ void Game::saveCurrentRoomState()
 	// Save current zombies (including dead ones removed)
 	m_roomZombies[roomKey] = m_zombies;
 	
+	// Save current traps
+	m_roomTraps[roomKey] = m_spikeTraps;
+	
+	// Save current pickups
+	m_roomPickups[roomKey] = m_pickups;
+	
+	// Save dropped items
+	m_roomDroppedItems[roomKey] = m_droppedItems;
+	
 	// Save current keys
 	m_roomKeys[roomKey] = m_keys;
 	
@@ -763,6 +925,38 @@ void Game::loadRoomState()
 		spawnZombiesForRoom();
 	}
 	
+	// Load traps for this room
+	if (m_roomTraps.find(roomKey) != m_roomTraps.end())
+	{
+		m_spikeTraps = m_roomTraps[roomKey];
+	}
+	else
+	{
+		// First time visiting - spawn new traps
+		spawnTrapsForRoom();
+	}
+	
+	// Load pickups for this room
+	if (m_roomPickups.find(roomKey) != m_roomPickups.end())
+	{
+		m_pickups = m_roomPickups[roomKey];
+	}
+	else
+	{
+		// First time visiting - spawn new pickups
+		spawnPickupsForRoom();
+	}
+	
+	// Load dropped items for this room
+	if (m_roomDroppedItems.find(roomKey) != m_roomDroppedItems.end())
+	{
+		m_droppedItems = m_roomDroppedItems[roomKey];
+	}
+	else
+	{
+		m_droppedItems.clear();
+	}
+	
 	// Load keys if they exist for this room
 	if (m_roomKeys.find(roomKey) != m_roomKeys.end())
 	{
@@ -772,6 +966,186 @@ void Game::loadRoomState()
 	{
 		m_keys.clear();
 	}
+}
+
+void Game::spawnTrapsForRoom()
+{
+	auto roomKey = std::make_pair(m_currentRoom.x, m_currentRoom.y);
+	
+	// Check if traps already spawned for this room
+	if (m_roomTraps.find(roomKey) != m_roomTraps.end())
+	{
+		return;
+	}
+
+	m_spikeTraps.clear();
+
+	const auto& room = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
+	const int windowW = m_window.getSize().x;
+	const int windowH = m_window.getSize().y;
+
+	float tileW = (float)windowW / room.width;
+	float tileH = (float)windowH / room.height;
+
+	int trapCount = 0;
+
+	// Spawn more traps in Trap-type rooms
+	switch (room.type)
+	{
+	case MapGenerator::Room::RoomType::Trap:
+		trapCount = 8;
+		break;
+	case MapGenerator::Room::RoomType::Normal:
+		trapCount = 3;
+		break;
+	case MapGenerator::Room::RoomType::Boss:
+		trapCount = 5;
+		break;
+	default:
+		trapCount = 1;
+		break;
+	}
+
+	// Place traps on random floor tiles
+	for (int i = 0; i < trapCount; ++i)
+	{
+		int attempts = 0;
+		while (attempts < 20)  // Try 20 times to find a valid spot
+		{
+			int x = 2 + (std::rand() % (room.width - 4));
+			int y = 2 + (std::rand() % (room.height - 4));
+
+			// Only place on floor tiles
+			if (room.tiles[y][x] == 0)
+			{
+				sf::Vector2f trapPos(
+					x * tileW + tileW * 0.5f,
+					y * tileH + tileH * 0.5f
+				);
+
+				SpikeTrap trap(trapPos, m_spikeTrapTexture);
+				m_spikeTraps.push_back(trap);
+				break;
+			}
+			attempts++;
+		}
+	}
+
+	// Store traps for this room
+	m_roomTraps[roomKey] = m_spikeTraps;
+
+	std::cout << "Spawned " << m_spikeTraps.size() << " spike traps in room (" 
+		<< m_currentRoom.x << "," << m_currentRoom.y << ")\n";
+}
+
+void Game::spawnPickupsForRoom()
+{
+	auto roomKey = std::make_pair(m_currentRoom.x, m_currentRoom.y);
+	
+	// Check if pickups already spawned for this room
+	if (m_roomPickups.find(roomKey) != m_roomPickups.end())
+	{
+		return;
+	}
+
+	m_pickups.clear();
+
+	const auto& room = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
+	const int windowW = m_window.getSize().x;
+	const int windowH = m_window.getSize().y;
+
+	float tileW = (float)windowW / room.width;
+	float tileH = (float)windowH / room.height;
+
+	// Determine pickup counts based on room type
+	int healthCount = 0;
+	int ammoCount = 0;
+
+	switch (room.type)
+	{
+	case MapGenerator::Room::RoomType::Treasure:
+		healthCount = 3; 
+		ammoCount = 3;   
+		break;
+	case MapGenerator::Room::RoomType::Boss:
+		healthCount = 2;  
+		ammoCount = 2;   
+		break;
+	case MapGenerator::Room::RoomType::Normal:
+		healthCount = 2;  
+		ammoCount = 2;   
+		break;
+	case MapGenerator::Room::RoomType::Trap:
+		healthCount = 2; 
+		ammoCount = 2;   
+		break;
+	case MapGenerator::Room::RoomType::Start:
+		healthCount = 1;
+		ammoCount = 1;
+		break;
+	default:
+		healthCount = 1;
+		ammoCount = 1;
+		break;
+	}
+
+	// Spawn health chests
+	for (int i = 0; i < healthCount; ++i)
+	{
+		int attempts = 0;
+		while (attempts < 30)
+		{
+			int x = 2 + (std::rand() % (room.width - 4));
+			int y = 2 + (std::rand() % (room.height - 4));
+
+			if (room.tiles[y][x] == 0)  // Floor tile
+			{
+				sf::Vector2f pickupPos(
+					x * tileW + tileW * 0.5f,
+					y * tileH + tileH * 0.5f
+				);
+
+				int healAmount = 25 + (std::rand() % 26);  // 25-50 HP
+				Pickup pickup(pickupPos, Pickup::Type::Health, healAmount, 
+					m_healthChestClosedTexture, m_healthChestOpenTexture);
+				m_pickups.push_back(pickup);
+				break;
+			}
+			attempts++;
+		}
+	}
+
+	// Spawn ammo chests
+	for (int i = 0; i < ammoCount; ++i)
+	{
+		int attempts = 0;
+		while (attempts < 30)
+		{
+			int x = 2 + (std::rand() % (room.width - 4));
+			int y = 2 + (std::rand() % (room.height - 4));
+
+			if (room.tiles[y][x] == 0)  // Floor tile
+			{
+				sf::Vector2f pickupPos(
+					x * tileW + tileW * 0.5f,
+					y * tileH + tileH * 0.5f
+				);
+
+				int ammoAmount = 20 + (std::rand() % 11);  // 20-30 ammo
+				Pickup pickup(pickupPos, Pickup::Type::Ammo, ammoAmount, 
+					m_ammoChestClosedTexture, m_ammoChestOpenTexture);
+				m_pickups.push_back(pickup);
+				break;
+			}
+			attempts++;
+		}
+	}
+
+	// Store pickups for this room
+	m_roomPickups[roomKey] = m_pickups;
+
+	std::cout << "Spawned " << healthCount << " health and " << ammoCount 
+		<< " ammo pickups in room (" << m_currentRoom.x << "," << m_currentRoom.y << ")\n";
 }
 
 sf::Vector2f Game::findSafeSpawn(const MapGenerator::Room& room)
@@ -889,7 +1263,7 @@ void Game::render()
 	    float tileW = static_cast<float>(windowW) / room.width;
 	    float tileH = static_cast<float>(windowH) / room.height;
 	    
-	
+
 	    sf::Sprite tileSprite;
 	    tileSprite.setTexture(m_mapGenerator.getTilesetTexture());
 	    
@@ -938,6 +1312,21 @@ void Game::render()
 		);
 		drawRoom(m_mapGenerator.getRoom(m_nextRoom.x, m_nextRoom.y), offset);
 	}
+
+	// Draw spike traps
+	for (auto& trap : m_spikeTraps)
+	{
+		trap.render(m_window);
+	}
+
+	// Draw pickups
+	for (auto& pickup : m_pickups)
+	{
+		pickup.render(m_window);
+	}
+
+	// Draw "Press E" prompts for chests
+	renderPickupPrompts();
 
 	//m_mapGenerator.render(m_window);
 	m_player.render(m_window);
@@ -1021,12 +1410,22 @@ void Game::render()
 		}
 	}
 
+	// Draw dropped items from chests
+	for (const auto& item : m_droppedItems)
+	{
+		if (!item.picked)
+		{
+			m_window.draw(item.sprite);
+		}
+	}
+
+	// Draw bullets
 	for (const auto& b : m_bullets)
 	{
 		b.render(m_window);
 	}
 
-			
+
 	sf::RectangleShape hb;
 	hb.setPosition(m_debugPlayerBox.left, m_debugPlayerBox.top);
 	hb.setSize({ m_debugPlayerBox.width, m_debugPlayerBox.height });
@@ -1157,6 +1556,31 @@ void Game::drawMiniMap()
 		}
 	}
 
+}
+
+// Draw "Press E" prompt for nearby chests
+void Game::renderPickupPrompts()
+{
+    for (const auto& pickup : m_pickups)
+    {
+        if (!pickup.isOpened() && !pickup.isPicked())
+        {
+            if (pickup.isNearby(m_debugPlayerBox, 60.f))
+            {
+                std::string promptText = (pickup.getType() == Pickup::Type::Health)
+                    ? "Press E to open (Health)"
+                    : "Press E to open (Ammo)" ;
+
+                sf::Text prompt(promptText, m_uiFont, 16);
+                prompt.setFillColor(sf::Color::White);
+                prompt.setPosition(
+                    pickup.getPosition().x - 70.f,
+                    pickup.getPosition().y - 40.f
+                );
+                m_window.draw(prompt);
+            }
+        }
+    }
 }
 
 std::string zombieStateToString(Zombie::State state)

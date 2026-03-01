@@ -35,7 +35,7 @@ public:
     // Runtime tile modification
     void setTile(int roomX, int roomY, int tileX, int tileY, int value);
 
-    // NEW: Autotiling helper
+  
     sf::IntRect getTileTextureRect(const Room& room, int tileX, int tileY) const;
 
 private:
@@ -47,7 +47,7 @@ private:
 
     sf::Texture m_wallTexture;
     sf::Texture m_floorTexture;
-    sf::Texture m_tilesetTexture;  // NEW: Main tileset with all variations
+    sf::Texture m_tilesetTexture;  
 
     bool isPathValid(const sf::Vector2i& start, const sf::Vector2i& goal) const;
 
@@ -56,7 +56,7 @@ private:
 
     void generateRoomLayout(Room& room);
     
-    // NEW: Autotiling helper methods
+   
     bool isWall(const Room& room, int x, int y) const;
     int countNeighborWalls(const Room& room, int x, int y) const;
 };

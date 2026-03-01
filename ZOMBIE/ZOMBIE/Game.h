@@ -9,6 +9,8 @@
 #include "Player.h"
 #include "MapGenerator.h"
 #include "Zombie.h"
+#include "SpikeTrap.h"
+#include "Pickup.h"
 #include <vector>
 #include <map>
 #include "Bullet.h"
@@ -60,6 +62,9 @@ private:
 	void spawnZombiesForRoom();
 	void saveCurrentRoomState();
 	void loadRoomState();
+	void spawnTrapsForRoom();
+	void spawnPickupsForRoom();
+	void renderPickupPrompts();
 
 	Player m_player;
 	MapGenerator m_mapGenerator;
@@ -71,6 +76,19 @@ private:
 
 	std::vector<Zombie> m_zombies;
 	sf::Texture m_zombieTexture;
+
+	// Spike traps
+	std::vector<SpikeTrap> m_spikeTraps;
+	sf::Texture m_spikeTrapTexture;
+	std::map<std::pair<int, int>, std::vector<SpikeTrap>> m_roomTraps;
+
+	// Pickups
+	std::vector<Pickup> m_pickups;
+	sf::Texture m_healthChestClosedTexture;
+	sf::Texture m_healthChestOpenTexture;
+	sf::Texture m_ammoChestClosedTexture;
+	sf::Texture m_ammoChestOpenTexture;
+	std::map<std::pair<int, int>, std::vector<Pickup>> m_roomPickups;
 
 	// Store zombies per room using room coordinates as key
 	std::map<std::pair<int, int>, std::vector<Zombie>> m_roomZombies;
@@ -117,4 +135,27 @@ private:
 
 
 	bool m_debugNearLockedDoor{ false };
+
+	// Dropped items
+	struct DroppedItem
+	{
+		enum class Type { Health, Ammo };
+		Type type;
+		int value;
+		sf::Vector2f pos;
+		sf::Sprite sprite;
+		bool picked{ false };
+		float bobTimer{ 0.f };
+		float baseY;
+		
+		DroppedItem(Type t, int v, sf::Vector2f p) 
+			: type(t), value(v), pos(p), baseY(p.y) {}
+	};
+
+	std::vector<DroppedItem> m_droppedItems;
+	sf::Texture m_healthPotionTexture;
+	sf::Texture m_ammoCrateTexture;
+
+	// Add to room storage
+	std::map<std::pair<int, int>, std::vector<DroppedItem>> m_roomDroppedItems;
 };

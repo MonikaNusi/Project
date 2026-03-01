@@ -24,7 +24,9 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MapGenerator.cpp" />
     <ClCompile Include="Pathfinding.cpp" />
+    <ClCompile Include="Pickup.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="SpikeTrap.cpp" />
     <ClCompile Include="Zombie.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -32,7 +34,9 @@
     <ClInclude Include="Game.h" />
     <ClInclude Include="MapGenerator.h" />
     <ClInclude Include="Pathfinding.h" />
+    <ClInclude Include="Pickup.h" />
     <ClInclude Include="Player.h" />
+    <ClInclude Include="SpikeTrap.h" />
     <ClInclude Include="Zombie.h" />
   </ItemGroup>
   <ItemGroup>

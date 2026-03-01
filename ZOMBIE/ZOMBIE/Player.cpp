@@ -82,6 +82,15 @@ void Player::takeDamage(int dmg)
 	}
 }
 
+void Player::heal(int amount)
+{
+    m_health += amount;
+    if (m_health > m_maxHealth)
+    {
+        m_health = m_maxHealth;
+    }
+}
+
 void Player::animate(sf::Time dt)
 {
 	m_timeSinceLastFrame += dt.asSeconds();
