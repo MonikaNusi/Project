@@ -110,6 +110,18 @@ Game::Game() :
 	}
 	m_ammoCrateTexture.setSmooth(false);
 
+	if (!m_bone1Texture.loadFromFile("ASSETS/IMAGES/bones1.png"))
+	{
+		std::cout << "Failed to load bone1 texture\n";
+	}
+	m_bone1Texture.setSmooth(false);
+
+	if (!m_bone2Texture.loadFromFile("ASSETS/IMAGES/bones2.png"))
+	{
+		std::cout << "Failed to load bone2 texture\n";
+	}
+	m_bone2Texture.setSmooth(false);
+
 }
 
 Game::~Game()
@@ -903,6 +915,9 @@ void Game::saveCurrentRoomState()
 	// Save dropped items
 	m_roomDroppedItems[roomKey] = m_droppedItems;
 	
+	// Save decorations
+	m_roomDecorations[roomKey] = m_decorations;
+	
 	// Save current keys
 	m_roomKeys[roomKey] = m_keys;
 	
@@ -932,7 +947,6 @@ void Game::loadRoomState()
 	}
 	else
 	{
-		// First time visiting - spawn new traps
 		spawnTrapsForRoom();
 	}
 	
@@ -943,8 +957,17 @@ void Game::loadRoomState()
 	}
 	else
 	{
-		// First time visiting - spawn new pickups
 		spawnPickupsForRoom();
+	}
+	
+	// Load decorations for this room
+	if (m_roomDecorations.find(roomKey) != m_roomDecorations.end())
+	{
+		m_decorations = m_roomDecorations[roomKey];
+	}
+	else
+	{
+		spawnDecorationsForRoom();
 	}
 	
 	// Load dropped items for this room
@@ -1148,6 +1171,109 @@ void Game::spawnPickupsForRoom()
 		<< " ammo pickups in room (" << m_currentRoom.x << "," << m_currentRoom.y << ")\n";
 }
 
+void Game::spawnDecorationsForRoom()
+{
+	auto roomKey = std::make_pair(m_currentRoom.x, m_currentRoom.y);
+	
+	// Check if decorations already spawned for this room
+	if (m_roomDecorations.find(roomKey) != m_roomDecorations.end())
+	{
+		return;
+	}
+
+	m_decorations.clear();
+
+	const auto& room = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
+	const int windowW = m_window.getSize().x;
+	const int windowH = m_window.getSize().y;
+
+	float tileW = (float)windowW / room.width;
+	float tileH = (float)windowH / room.height;
+
+	// Determine decoration count based on room type
+	int boneCount = 0;
+
+	switch (room.type)
+	{
+	case MapGenerator::Room::RoomType::Treasure:
+		boneCount = 2; 
+		break;
+	case MapGenerator::Room::RoomType::Boss:
+		boneCount = 8;
+		break;
+	case MapGenerator::Room::RoomType::Normal:
+		boneCount = 3 + (std::rand() % 3);
+		break;
+	case MapGenerator::Room::RoomType::Trap:
+		boneCount = 5 + (std::rand() % 4); 
+		break;
+	case MapGenerator::Room::RoomType::Start:
+		boneCount = 2;
+		break;
+	default:
+		boneCount = 2;
+		break;
+	}
+
+	// Spawn random bones around the room
+	for (int i = 0; i < boneCount; ++i)
+	{
+		int attempts = 0;
+		while (attempts < 30)
+		{
+			int x = 1 + (std::rand() % (room.width - 2));
+			int y = 1 + (std::rand() % (room.height - 2));
+
+			if (room.tiles[y][x] == 0)  // Floor tile
+			{
+				sf::Vector2f decorationPos(
+					x * tileW + tileW * 0.5f,
+					y * tileH + tileH * 0.5f
+				);
+
+				Decoration decoration(decorationPos);
+				
+				// Randomly choose between bone1 and bone2
+				bool useBone1 = (std::rand() % 2 == 0);
+				if (useBone1)
+				{
+					decoration.sprite.setTexture(m_bone1Texture);
+				}
+				else
+				{
+					decoration.sprite.setTexture(m_bone2Texture);
+				}
+				
+				// Center origin
+				decoration.sprite.setOrigin(
+					decoration.sprite.getTexture()->getSize().x / 2.f,
+					decoration.sprite.getTexture()->getSize().y / 2.f
+				);
+				
+				decoration.sprite.setPosition(decorationPos);
+				
+				// Random scale between 0.8 and 1.5
+				float scale = 0.8f + static_cast<float>(std::rand() % 70) / 100.f;
+				decoration.sprite.setScale(scale, scale);
+				
+				// Random rotation
+				float rotation = static_cast<float>(std::rand() % 360);
+				decoration.sprite.setRotation(rotation);
+				
+				m_decorations.push_back(decoration);
+				break;
+			}
+			attempts++;
+		}
+	}
+
+	// Store decorations for this room
+	m_roomDecorations[roomKey] = m_decorations;
+
+	std::cout << "Spawned " << boneCount << " bone decorations in room (" 
+		<< m_currentRoom.x << "," << m_currentRoom.y << ")\n";
+}
+
 sf::Vector2f Game::findSafeSpawn(const MapGenerator::Room& room)
 {
 	const int windowW = m_window.getSize().x;
@@ -1319,16 +1445,22 @@ void Game::render()
 		trap.render(m_window);
 	}
 
-	// Draw pickups
+	// Draw decorations
+	for (const auto& decoration : m_decorations)
+	{
+		m_window.draw(decoration.sprite);
+	}
+
+	// Draw pickups (chests)
 	for (auto& pickup : m_pickups)
 	{
 		pickup.render(m_window);
 	}
 
-	// Draw "Press E" prompts for chests
+	// ADD THIS LINE - Draw "Press E" prompts for chests
 	renderPickupPrompts();
 
-	//m_mapGenerator.render(m_window);
+	// Draw player
 	m_player.render(m_window);
 
 	for (auto& z : m_zombies)

@@ -65,6 +65,7 @@ private:
 	void spawnTrapsForRoom();
 	void spawnPickupsForRoom();
 	void renderPickupPrompts();
+	void spawnDecorationsForRoom();
 
 	Player m_player;
 	MapGenerator m_mapGenerator;
@@ -114,6 +115,15 @@ private:
 		}
 	};
 
+	struct Decoration
+	{
+		sf::Sprite sprite;
+		sf::Vector2f pos;
+		
+		Decoration(sf::Vector2f p) : pos(p) {}
+	};
+
+
 	std::vector<Key> m_keys;
 	bool m_playerHasKey{ false };
 
@@ -158,4 +168,9 @@ private:
 
 	// Add to room storage
 	std::map<std::pair<int, int>, std::vector<DroppedItem>> m_roomDroppedItems;
+
+	std::vector<Decoration> m_decorations;
+	sf::Texture m_bone1Texture;
+	sf::Texture m_bone2Texture;
+	std::map<std::pair<int, int>, std::vector<Decoration>> m_roomDecorations;
 };
