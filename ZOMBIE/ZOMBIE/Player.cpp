@@ -12,6 +12,21 @@ Player::Player()
 	m_sprite.setPosition(400.f, 400.f);
 	m_sprite.setScale(2,2);
 
+	// Load footstep sound
+	if (!m_footstepBuffer.loadFromFile("ASSETS\\SOUNDS\\Playerwalking.wav"))
+	{
+		std::cout << "Failed to load footstep sound\n";
+	}
+	m_footstepSound.setBuffer(m_footstepBuffer);
+	m_footstepSound.setVolume(30.f);
+
+	// Load shooting sound
+	if (!m_shootBuffer.loadFromFile("ASSETS\\SOUNDS\\Gun.wav"))
+	{
+		std::cout << "Failed to load shooting sound\n";
+	}
+	m_shootSound.setBuffer(m_shootBuffer);
+	m_shootSound.setVolume(30.f);
 }
 
 void Player::hadnleInput()
@@ -34,6 +49,9 @@ void Player::hadnleInput()
 		m_velocity /= std::sqrt(2.f);
 	}
     
+	// Track if player is moving
+	m_isMoving = (m_velocity.x != 0 || m_velocity.y != 0);
+
     if (up && left)          m_currentRow = 2; 
 	else if (up && right)    m_currentRow = 4; 
     else if (down && left)   m_currentRow = 1; 
@@ -57,6 +75,24 @@ void Player::update(sf::Time dt)
 	{
 		m_currentFrame = 0;
 		m_sprite.setTextureRect(sf::IntRect(0, m_currentRow * m_frameSize.y, m_frameSize.x, m_frameSize.y));
+	}
+
+	//footstep sounds
+	if (m_isMoving)
+	{
+		m_footstepTimer += dt.asSeconds();
+		
+		if (m_footstepTimer >= m_footstepInterval)
+		{
+			m_footstepTimer = 0.f;
+			m_footstepSound.play();
+		}
+	}
+	else
+	{
+		// Reset timer and stop sound when not moving
+		m_footstepTimer = 0.f;
+		m_footstepSound.stop();
 	}
 
 	if (m_fireCooldown > 0.f)
@@ -117,10 +153,18 @@ bool Player::canShoot() const
 {
 	return m_fireCooldown <= 0.f && m_ammo > 0;
 }
+
 void Player::shoot() 
 {
 	m_fireCooldown = m_fireRate;
-	m_ammo--; 
+	m_ammo--;
+	
+	// Stop previous shot if still playing, then play new one
+	if (m_shootSound.getStatus() == sf::Sound::Playing)
+	{
+		m_shootSound.stop();
+	}
+	m_shootSound.play();
 }
 
 void Player::addAmmo(int amount)

@@ -1,5 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
+
 class Player
 {
 public:
@@ -51,5 +53,16 @@ private:
 	int m_currentRow{ 0 };
 	void animate(sf::Time dt);
 	int getAnimationRow(bool up, bool down, bool left, bool right) const;
+
+	// Footstep sound
+	sf::SoundBuffer m_footstepBuffer;
+	sf::Sound m_footstepSound;
+	float m_footstepTimer{ 0.f };
+	float m_footstepInterval{ 0.4f };
+	bool m_isMoving{ false };
+
+	// Shooting sound
+	sf::SoundBuffer m_shootBuffer;
+	sf::Sound m_shootSound;
 };
 
