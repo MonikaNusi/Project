@@ -5,19 +5,18 @@
 #include "Pathfinding.h"
 #include <algorithm>
 
+// Initialize static sound buffers
+sf::SoundBuffer Zombie::m_deathSoundBuffer;
+sf::SoundBuffer Zombie::m_groanSoundBuffer;
+
 Zombie::Zombie(const sf::Texture& texture)
     : m_texture(&texture)
 {
     m_sprite.setTexture(*m_texture);
-
     m_sprite.setOrigin(8.f, 12.f);
-
-
     m_sprite.setScale(m_baseScale, m_baseScale);
 
     m_health = m_maxHealth;
-
-
     m_cooldownTimer = m_cooldownDuration;
     m_hasDealtDamageThisAttack = false;
 
@@ -41,6 +40,40 @@ Zombie::Zombie(const sf::Texture& texture)
     }
     m_deathTex.setSmooth(false);
 
+    // Load death sound effect ONLY ONCE (when first zombie is created)
+    static bool soundsLoaded = false;
+    if (!soundsLoaded)
+    {
+        if (!m_deathSoundBuffer.loadFromFile("ASSETS/SOUNDS/Zombiedeath.wav"))
+        {
+            std::cout << "Failed to load zombie death sound\n";
+        }
+        else
+        {
+            std::cout << "Successfully loaded zombie death sound\n";
+        }
+
+        if (!m_groanSoundBuffer.loadFromFile("ASSETS/SOUNDS/Zombieswalking.wav"))
+        {
+            std::cout << "Failed to load zombie groan sound\n";
+        }
+        else
+        {
+            std::cout << "Successfully loaded zombie groan sound\n";
+        }
+        
+        soundsLoaded = true;
+    }
+    
+    // Each zombie gets its own sound instances, but they all share the buffers
+    m_deathSound.setBuffer(m_deathSoundBuffer);
+    m_deathSound.setVolume(50.f);
+
+    m_groanSound.setBuffer(m_groanSoundBuffer);
+    m_groanSound.setVolume(25.f);  // Lower volume for ambient groans
+    
+    // Randomize initial groan timer so zombies don't all groan at once
+    m_groanTimer = static_cast<float>(std::rand() % 100) / 100.0f * m_groanInterval;
 
     m_healthBarBack.setFillColor(sf::Color(80, 0, 0));
     m_healthBarBack.setOutlineThickness(1.f);
@@ -137,6 +170,12 @@ void Zombie::setState(State newState)
         m_frameTimer = 0.f;
         m_velocity = { 0.f, 0.f };  // Stop movement
         m_deathAnimComplete = false;
+        
+        // Play death sound
+        std::cout << "[Zombie] Playing death sound - Status: " << static_cast<int>(m_deathSound.getStatus()) << "\n";
+        m_deathSound.play();
+        std::cout << "[Zombie] After play - Status: " << static_cast<int>(m_deathSound.getStatus()) << "\n";
+        
         std::cout << "[Zombie] Starting death animation\n";
     }
 
@@ -149,7 +188,6 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
     float tileH,
     const std::vector<Zombie*>& zombies)
 {
-
     if (m_state == State::Dying)
     {
         animate(dt);
@@ -162,6 +200,33 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
     float ds = dt.asSeconds();
     float dist = distanceTo(playerPos);
 
+    // Update groan timer and play groan sound periodically
+    m_groanTimer += ds;
+    if (m_groanTimer >= m_groanInterval)
+    {
+        m_groanTimer = 0.f;
+        
+        // Play groan with some randomness (70% chance)
+        if (std::rand() % 100 < 70)
+        {
+            // Groan more frequently when chasing or attacking
+            if (m_state == State::Chase || m_state == State::Attack)
+            {
+                m_groanSound.setVolume(35.f);  // Louder when active
+                m_groanInterval = 2.f;  // More frequent
+            }
+            else
+            {
+                m_groanSound.setVolume(20.f);  // Quieter when patrolling
+                m_groanInterval = 4.f;  // Less frequent
+            }
+            
+            m_groanSound.play();
+        }
+        
+        // Randomize next groan time slightly
+        m_groanInterval += (static_cast<float>(std::rand() % 100) / 100.0f - 0.5f);
+    }
 
     float attackEnter = m_attackRange;
     float attackExit  = m_attackRange * 0.9f;
@@ -494,6 +559,10 @@ void Zombie::reset(sf::Vector2f spawnPos)
     m_hasKey = false;
 
     m_deathAnimComplete = false;
+    
+    
+    m_groanTimer = static_cast<float>(std::rand() % 100) / 100.0f * m_groanInterval;
+    m_groanInterval = 3.f;
 }
 
 void Zombie::updateFacing(sf::Vector2f dir)

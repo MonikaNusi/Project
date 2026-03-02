@@ -1,4 +1,6 @@
 #pragma once
+
+#include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
 #include <string>
 
@@ -160,5 +162,14 @@ private:
     bool m_deathAnimComplete{ false };
     static const int m_deathFrameCount = 8;
 
+    // Death sound
+    static sf::SoundBuffer m_deathSoundBuffer;
+    sf::Sound m_deathSound;
+
+    // Groan sound
+    static sf::SoundBuffer m_groanSoundBuffer;
+    sf::Sound m_groanSound;
+    float m_groanTimer{ 0.f };
+    float m_groanInterval{ 3.f };  // Time between groans
 };
 
