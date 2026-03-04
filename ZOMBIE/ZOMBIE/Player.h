@@ -27,7 +27,9 @@ public:
 	void takeDamage(int dmg);
 	int getHealth() const { return m_health; }
 	int getMaxHealth() const { return m_maxHealth; }
-    void heal(int amount);
+	void heal(int amount);
+
+	void playPickupSound();
 
 private:
 	sf::Sprite m_sprite;
@@ -54,7 +56,7 @@ private:
 	void animate(sf::Time dt);
 	int getAnimationRow(bool up, bool down, bool left, bool right) const;
 
-	// Footstep sound
+	// Footstep soundS
 	sf::SoundBuffer m_footstepBuffer;
 	sf::Sound m_footstepSound;
 	float m_footstepTimer{ 0.f };
@@ -64,5 +66,9 @@ private:
 	// Shooting sound
 	sf::SoundBuffer m_shootBuffer;
 	sf::Sound m_shootSound;
+
+	// Pickup sound
+	sf::SoundBuffer m_pickupBuffer;
+	sf::Sound m_pickupSound;
 };
 

@@ -14,6 +14,7 @@
 #include <vector>
 #include <map>
 #include "Bullet.h"
+#include "BossZombie.h"
 
 class Game
 {
@@ -173,4 +174,8 @@ private:
 	sf::Texture m_bone1Texture;
 	sf::Texture m_bone2Texture;
 	std::map<std::pair<int, int>, std::vector<Decoration>> m_roomDecorations;
+
+	// Boss zombie
+	std::unique_ptr<BossZombie> m_bossZombie;
+	bool m_bossDefeated{ false };
 };

@@ -250,14 +250,6 @@ void Game::update(sf::Time t_deltaTime)
 				}
 			}
 
-			if (m_player.getHealth() <= 0)
-			{
-				std::cout << "GAME OVER\n";
-				m_window.close();
-			}
-
-
-
 			if (isCollidingWithWall(z.getHitbox()))
 			{
 
@@ -365,6 +357,22 @@ void Game::update(sf::Time t_deltaTime)
 			}
 		}
 
+	}
+
+	// Bullet collision with boss zombie
+	if (m_bossZombie)
+	{
+		for (auto& b : m_bullets)
+		{
+			if (!b.isAlive()) continue;
+
+			if (b.getBounds().intersects(m_bossZombie->getHitbox()))
+			{
+				m_bossZombie->takeDamage(25);
+				b.kill();
+				std::cout << "Hit boss!\n";
+			}
+		}
 	}
 
 	// Update spike traps
@@ -760,11 +768,6 @@ foundDoor:
 			int oldY = m_currentRoom.y;
 			m_currentRoom = m_nextRoom;  //switch to the next room
 
-			//for (auto& z : m_zombies)
-				//z.setFrozen(true);
-
-			//spawnZombiesForRoom();
-
 			loadRoomState();
 
 			m_visitedRooms[m_currentRoom.y][m_currentRoom.x] = true;  //mark room as visited
@@ -838,6 +841,58 @@ foundDoor:
 			m_slideTarget = m_slideStart + direction;
 		}
 	}
+
+	// Update boss zombie
+	if (m_bossZombie)
+	{
+		sf::Vector2f oldBossPos = m_bossZombie->getPosition();
+		
+		const auto& room = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
+		float tileW = (float)m_window.getSize().x / room.width;
+		float tileH = (float)m_window.getSize().y / room.height;
+		
+		m_bossZombie->update(t_deltaTime, playerCenter, room.tiles, tileW, tileH);
+		
+		// Boss collision with walls
+		if (isCollidingWithWall(m_bossZombie->getHitbox()))
+		{
+			sf::Vector2f newPos = m_bossZombie->getPosition();
+			
+			// Try moving only horizontally
+			m_bossZombie->setPosition(newPos.x, oldBossPos.y);
+			if (isCollidingWithWall(m_bossZombie->getHitbox()))
+			{
+				// Try moving only vertically
+				m_bossZombie->setPosition(oldBossPos.x, newPos.y);
+				if (isCollidingWithWall(m_bossZombie->getHitbox()))
+				{
+					m_bossZombie->setPosition(oldBossPos.x, oldBossPos.y);
+				}
+			}
+		}
+		
+		// Boss attack player
+		int dmg = m_bossZombie->tryDealDamage(m_debugPlayerBox);
+		if (dmg > 0)
+		{
+			m_player.takeDamage(dmg);
+			std::cout << "Boss dealt " << dmg << " damage! Player Health: " << m_player.getHealth() << "\n";
+		}
+		
+		// Check if boss is dead
+		if (m_bossZombie->isDeathAnimationComplete())
+		{
+			std::cout << "BOSS DEFEATED!\n";
+			m_bossDefeated = true;
+			m_bossZombie.reset();
+		}
+	}
+
+	if (m_player.getHealth() <= 0)
+	{
+		std::cout << "GAME OVER - Player Health: " << m_player.getHealth() << "\n";
+		m_exitGame = true;
+	}
 }
 
 void Game::spawnZombiesForRoom()
@@ -861,16 +916,23 @@ void Game::spawnZombiesForRoom()
 	switch (room.type)
 	{
 	case MapGenerator::Room::RoomType::Normal:
-		count = 5;
+		count = 2;
 		break;
 	case MapGenerator::Room::RoomType::Trap:
-		count = 10;
+		count = 2;
 		break;
 	case MapGenerator::Room::RoomType::Treasure:
 		count = 1;
 		break;
 	case MapGenerator::Room::RoomType::Boss:
-		count = 0; // boss later
+		count = 0;
+
+		if (!m_bossDefeated)
+		{
+			sf::Vector2f bossSpawn = findSafeSpawn(room);
+			m_bossZombie = std::make_unique<BossZombie>(bossSpawn);
+			std::cout << "Boss zombie spawned!\n";
+		}
 		break;
 	default:
 		count = 1;
@@ -903,7 +965,7 @@ void Game::saveCurrentRoomState()
 {
 	auto roomKey = std::make_pair(m_currentRoom.x, m_currentRoom.y);
 	
-	// Save current zombies (including dead ones removed)
+	// Save current zombies
 	m_roomZombies[roomKey] = m_zombies;
 	
 	// Save current traps
@@ -1022,7 +1084,7 @@ void Game::spawnTrapsForRoom()
 		trapCount = 3;
 		break;
 	case MapGenerator::Room::RoomType::Boss:
-		trapCount = 5;
+		trapCount = 10;
 		break;
 	default:
 		trapCount = 1;
@@ -1451,13 +1513,13 @@ void Game::render()
 		m_window.draw(decoration.sprite);
 	}
 
-	// Draw pickups (chests)
+	// Draw pickups
 	for (auto& pickup : m_pickups)
 	{
 		pickup.render(m_window);
 	}
 
-	// ADD THIS LINE - Draw "Press E" prompts for chests
+	//m_mapGenerator.render(m_window);
 	renderPickupPrompts();
 
 	// Draw player
@@ -1523,13 +1585,26 @@ void Game::render()
 			}
 		}
 
-
-
+		// Draw zombie hitbox
 		sf::RectangleShape hb;
 		auto zb = z.getHitbox();
 		hb.setPosition(zb.left, zb.top);
 		hb.setSize({ zb.width, zb.height });
 		hb.setFillColor(sf::Color(0, 255, 0, 120));
+		m_window.draw(hb);
+	}
+
+	// Draw boss zombie
+	if (m_bossZombie)
+	{
+		m_bossZombie->render(m_window);
+
+		// Debug hitbox for boss
+		sf::RectangleShape hb;
+		auto bossHitbox = m_bossZombie->getHitbox();
+		hb.setPosition(bossHitbox.left, bossHitbox.top);
+		hb.setSize({ bossHitbox.width, bossHitbox.height });
+		hb.setFillColor(sf::Color(255, 0, 255, 120));
 		m_window.draw(hb);
 	}
 
@@ -1701,7 +1776,7 @@ void Game::renderPickupPrompts()
             {
                 std::string promptText = (pickup.getType() == Pickup::Type::Health)
                     ? "Press E to open (Health)"
-                    : "Press E to open (Ammo)" ;
+					: "Press E to open (Ammo)" ;
 
                 sf::Text prompt(promptText, m_uiFont, 16);
                 prompt.setFillColor(sf::Color::White);

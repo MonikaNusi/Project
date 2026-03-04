@@ -40,7 +40,7 @@ Zombie::Zombie(const sf::Texture& texture)
     }
     m_deathTex.setSmooth(false);
 
-    // Load death sound effect ONLY ONCE (when first zombie is created)
+    
     static bool soundsLoaded = false;
     if (!soundsLoaded)
     {
@@ -65,12 +65,12 @@ Zombie::Zombie(const sf::Texture& texture)
         soundsLoaded = true;
     }
     
-    // Each zombie gets its own sound instances, but they all share the buffers
+
     m_deathSound.setBuffer(m_deathSoundBuffer);
     m_deathSound.setVolume(50.f);
 
     m_groanSound.setBuffer(m_groanSoundBuffer);
-    m_groanSound.setVolume(25.f);  // Lower volume for ambient groans
+    m_groanSound.setVolume(25.f); 
     
     // Randomize initial groan timer so zombies don't all groan at once
     m_groanTimer = static_cast<float>(std::rand() % 100) / 100.0f * m_groanInterval;
@@ -206,7 +206,7 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
     {
         m_groanTimer = 0.f;
         
-        // Play groan with some randomness (70% chance)
+        // Play groan with some randomness
         if (std::rand() % 100 < 70)
         {
             // Groan more frequently when chasing or attacking
