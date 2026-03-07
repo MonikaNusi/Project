@@ -567,8 +567,8 @@ void Game::update(sf::Time t_deltaTime)
 					float dyp = py - center.y;
 					float dist = std::sqrt(dxp * dxp + dyp * dyp);
 
-					// Increased detection radius
-					if (dist < 80.f)
+					//detection radius
+					if (dist < 120.f)
 					{
 						nearLockedDoor = true;
 						doorRoomX = m_currentRoom.x;

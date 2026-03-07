@@ -10,7 +10,7 @@ Player::Player()
 	m_sprite.setTexture(m_texture);
 	m_sprite.setTextureRect(sf::IntRect(0, 0, m_frameSize.x, m_frameSize.y));
 	m_sprite.setPosition(400.f, 400.f);
-	m_sprite.setScale(2,2);
+	m_sprite.setScale(2.7, 2.7);
 
 	// Load footstep sound
 	if (!m_footstepBuffer.loadFromFile("ASSETS\\SOUNDS\\Playerwalking.wav"))

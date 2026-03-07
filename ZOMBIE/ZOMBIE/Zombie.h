@@ -127,7 +127,7 @@ private:
     float m_frameTimer = 0.f;
     float m_frameTime = 0.14f;
 
-    float m_baseScale = 2.f;
+    float m_baseScale = 2.7f;
 
     // Textures
     sf::Texture m_walkDownTex;
