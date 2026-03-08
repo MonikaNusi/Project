@@ -11,7 +11,7 @@ Minion::Minion(sf::Vector2f spawnPos)
         std::cout << "Successfully loaded minion move texture\n";
     m_moveTex.setSmooth(false);
 
-    if (!m_attackTex.loadFromFile("ASSETS/IMAGES/Minionattack.png"))
+    if (!m_attackTex.loadFromFile("ASSETS/IMAGES/Minionattcak.png"))
         std::cout << "Failed to load minion attack texture\n";
     else
         std::cout << "Successfully loaded minion attack texture\n";

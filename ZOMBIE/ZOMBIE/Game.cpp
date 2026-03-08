@@ -1,5 +1,5 @@
 ﻿/// <summary>
-/// @author Moniks Nusi
+/// @author Monika Nusi
 /// @date 
 /// </summary>
 
@@ -1035,27 +1035,33 @@ void Game::spawnZombiesForRoom()
 		return;
 	}
 
-	// First time visiting - spawn new zombies
+
 	m_zombies.clear();
+	m_minions.clear();
 
 	const auto& room = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
 
+	int zombieCount = 0;
+	int minionCount = 0;
 
-	int count = 0;
 
 	switch (room.type)
 	{
 	case MapGenerator::Room::RoomType::Normal:
-		count = 2;
+		zombieCount = 2;
+		minionCount = 2 + (std::rand() % 2);
 		break;
 	case MapGenerator::Room::RoomType::Trap:
-		count = 2;
+		zombieCount = 2;
+		minionCount = 4 + (std::rand() % 5);
 		break;
 	case MapGenerator::Room::RoomType::Treasure:
-		count = 1;
+		zombieCount = 1;
+		minionCount = 3 + (std::rand() % 4);
 		break;
 	case MapGenerator::Room::RoomType::Boss:
-		count = 0;
+		zombieCount = 0;
+		minionCount = 0;
 
 		if (!m_bossDefeated)
 		{
@@ -1064,19 +1070,38 @@ void Game::spawnZombiesForRoom()
 			std::cout << "Boss zombie spawned!\n";
 		}
 		break;
+	case MapGenerator::Room::RoomType::Start:
+		zombieCount = 1;
+		minionCount = 0;
+		break;
 	default:
-		count = 1;
+		zombieCount = 1;
+		minionCount = 1;
 		break;
 	}
 
-	for (int i = 0; i < count; ++i)
+	std::vector<sf::Vector2f> usedPositions;
+	const float minSpawnDistance = 80.f;
+
+	// Spawn zombies
+	for (int i = 0; i < zombieCount; ++i)
 	{
+		sf::Vector2f spawn = findUniqueSpawn(room, usedPositions, minSpawnDistance);
+		usedPositions.push_back(spawn);
+		
 		Zombie z(m_zombieTexture);
-
-		sf::Vector2f spawn = findSafeSpawn(room);
 		z.reset(spawn);
-
 		m_zombies.push_back(z);
+	}
+
+	// Spawn minions
+	for (int i = 0; i < minionCount; ++i)
+	{
+		sf::Vector2f spawn = findUniqueSpawn(room, usedPositions, minSpawnDistance);
+		usedPositions.push_back(spawn);
+		
+		Minion minion(spawn);
+		m_minions.push_back(minion);
 	}
 
 	// randomly assign one zombie to carry the key
@@ -1087,8 +1112,12 @@ void Game::spawnZombiesForRoom()
 		std::cout << "Assigned key to zombie " << idx << "\n";
 	}
 
-	// Store the initial zombie state for this room
+	// Store the initial state for this room
 	m_roomZombies[roomKey] = m_zombies;
+	m_roomMinions[roomKey] = m_minions;
+	
+	std::cout << "Spawned " << zombieCount << " zombies and " << minionCount 
+		<< " minions in room (" << m_currentRoom.x << "," << m_currentRoom.y << ")\n";
 }
 
 void Game::saveCurrentRoomState()
@@ -1097,6 +1126,9 @@ void Game::saveCurrentRoomState()
 	
 	// Save current zombies
 	m_roomZombies[roomKey] = m_zombies;
+	
+	// Save current minions
+	m_roomMinions[roomKey] = m_minions;
 	
 	// Save current traps
 	m_roomTraps[roomKey] = m_spikeTraps;
@@ -1113,23 +1145,32 @@ void Game::saveCurrentRoomState()
 	// Save current keys
 	m_roomKeys[roomKey] = m_keys;
 	
-	std::cout << "Saved room (" << m_currentRoom.x << "," << m_currentRoom.y << ") with " << m_zombies.size() << " zombies\n";
+	std::cout << "Saved room (" << m_currentRoom.x << "," << m_currentRoom.y 
+		<< ") with " << m_zombies.size() << " zombies and " << m_minions.size() << " minions\n";
 }
 
 void Game::loadRoomState()
 {
 	auto roomKey = std::make_pair(m_currentRoom.x, m_currentRoom.y);
 	
-	// Load zombies for this room
-	if (m_roomZombies.find(roomKey) != m_roomZombies.end())
+	// Check if this room has been visited before
+	bool roomExists = (m_roomZombies.find(roomKey) != m_roomZombies.end());
+	
+	if (roomExists)
 	{
+		// Room already visited - load saved state
 		m_zombies = m_roomZombies[roomKey];
-		std::cout << "Loaded room (" << m_currentRoom.x << "," << m_currentRoom.y << ") with " << m_zombies.size() << " zombies\n";
+		m_minions = m_roomMinions[roomKey];
+		
+		std::cout << "Loaded room (" << m_currentRoom.x << "," << m_currentRoom.y 
+			<< ") with " << m_zombies.size() << " zombies and " << m_minions.size() << " minions\n";
 	}
 	else
 	{
-		// First time visiting - spawn new zombies
+
 		spawnZombiesForRoom();
+		std::cout << "First visit - spawned " << m_zombies.size() << " zombies and " 
+			<< m_minions.size() << " minions\n";
 	}
 	
 	// Load traps for this room
@@ -1945,4 +1986,52 @@ std::string zombieStateToString(Zombie::State state)
 	case Zombie::State::Cooldown: return "Cooldown";
 	default:                      return "Unknown";
 	}
+}
+
+sf::Vector2f Game::findUniqueSpawn(const MapGenerator::Room& room, 
+	const std::vector<sf::Vector2f>& usedPositions, 
+	float minDistance)
+{
+	const int windowW = m_window.getSize().x;
+	const int windowH = m_window.getSize().y;
+
+	float tileW = (float)windowW / room.width;
+	float tileH = (float)windowH / room.height;
+
+	// Try up to 50 times to find a unique spawn position
+	for (int attempt = 0; attempt < 50; ++attempt)
+	{
+		// Generate random position on a floor tile
+		int x = 2 + (std::rand() % (room.width - 4));
+		int y = 2 + (std::rand() % (room.height - 4));
+
+		if (room.tiles[y][x] != 0) continue;  // Not a floor tile
+
+		sf::Vector2f candidate(
+			x * tileW + tileW * 0.5f,
+			y * tileH + tileH * 0.5f
+		);
+
+		// Check if this position is far enough from all used positions
+		bool validPosition = true;
+		for (const auto& usedPos : usedPositions)
+		{
+			float dx = candidate.x - usedPos.x;
+			float dy = candidate.y - usedPos.y;
+			float distSq = dx * dx + dy * dy;
+
+			if (distSq < minDistance * minDistance)
+			{
+				validPosition = false;
+				break;
+			}
+		}
+
+		if (validPosition)
+		{
+			return candidate;
+		}
+	}
+
+	return findSafeSpawn(room);
 }
