@@ -136,6 +136,13 @@ void BossZombie::setState(State newState)
 		if (m_chargeSoundBuffer.getDuration().asSeconds() > 0.f)
 			m_chargeSound.play();
 	}
+	else if (m_state == State::SummonMinions)
+	{
+		m_summonTimer = 0.f;
+		if (m_roarSoundBuffer.getDuration().asSeconds() > 0.f)
+			m_roarSound.play();
+		std::cout << "[BossZombie] Starting minion summon!\n";
+	}
 	else if (m_state == State::Dying)
 	{
 		m_velocity = { 0.f, 0.f };
@@ -175,6 +182,9 @@ void BossZombie::update(sf::Time dt, sf::Vector2f playerPos,
 	if (m_chargeCooldown > 0.f)
 		m_chargeCooldown -= ds;
 
+	if (m_summonCooldown > 0.f)
+		m_summonCooldown -= ds;
+
 	// Update roar timer
 	m_roarTimer += ds;
 	if (m_roarTimer >= m_roarInterval && m_state != State::Idle)
@@ -198,6 +208,19 @@ void BossZombie::update(sf::Time dt, sf::Vector2f playerPos,
 
 	case State::Walking:
 	{
+		// Check if should summon minions
+		if (!m_hasSpawnedMinionsAtThreshold && m_health <= m_healthThresholdForSummon)
+		{
+			setState(State::SummonMinions);
+			m_hasSpawnedMinionsAtThreshold = true;
+			break;
+		}
+		else if (m_summonCooldown <= 0.f && (std::rand() % 100) < 5) 
+		{
+			setState(State::SummonMinions);
+			break;
+		}
+
 		// Check if should charge
 		if (dist <= m_chargeRange && dist > m_attackRange && m_chargeCooldown <= 0.f)
 		{
@@ -263,6 +286,21 @@ void BossZombie::update(sf::Time dt, sf::Vector2f playerPos,
 		{
 			m_attackCooldown = m_attackCooldownDuration;
 			setState(State::Walking);
+		}
+		break;
+	}
+
+	case State::SummonMinions:
+	{
+		m_summonTimer += ds;
+		m_velocity = { 0.f, 0.f };  // Stand still while summoning
+
+		if (m_summonTimer >= m_summonDuration)
+		{
+			m_shouldSpawnMinions = true;
+			m_summonCooldown = m_summonCooldownDuration;
+			setState(State::Walking);
+			std::cout << "[BossZombie] Minions ready to spawn!\n";
 		}
 		break;
 	}
@@ -384,7 +422,7 @@ void BossZombie::animate(sf::Time dt)
 	}
 
 	// Attack animation
-	if (m_state == State::BigAttack)
+	if (m_state == State::BigAttack || m_state == State::SummonMinions)
 	{
 		m_frameIndex = std::min(m_frameIndex, 14);
 

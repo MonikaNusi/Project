@@ -122,10 +122,26 @@ Game::Game() :
 	}
 	m_bone2Texture.setSmooth(false);
 
+	// Load boss music
+	if (!m_bossMusic.openFromFile("ASSETS/SOUNDS/boss.wav"))
+	{
+		std::cout << "Failed to load boss music\n";
+	}
+	else
+	{
+		m_bossMusic.setLoop(true);
+		m_bossMusic.setVolume(50.f);
+		std::cout << "Successfully loaded boss music\n";
+	}
 }
 
 Game::~Game()
 {
+	// Stop boss music when game ends
+	if (m_bossMusic.getStatus() == sf::Music::Playing)
+	{
+		m_bossMusic.stop();
+	}
 }
 
 void Game::run()
@@ -195,12 +211,35 @@ void Game::processKeys(sf::Event t_event)
 	}
 }
 
+void Game::updateBossMusic()
+{
+	const auto& currentRoomData = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
+	bool inBossRoom = (currentRoomData.type == MapGenerator::Room::RoomType::Boss);
+
+	// Start music when entering boss room
+	if (inBossRoom && !m_bossMusixPlaying && !m_bossDefeated)
+	{
+		m_bossMusic.play();
+		m_bossMusixPlaying = true;
+		std::cout << "Boss music started\n";
+	}
+	// Stop music when leaving boss room or boss is defeated
+	else if ((!inBossRoom || m_bossDefeated) && m_bossMusixPlaying)
+	{
+		m_bossMusic.stop();
+		m_bossMusixPlaying = false;
+		std::cout << "Boss music stopped\n";
+	}
+}
+
 void Game::update(sf::Time t_deltaTime)
 {
 	if (m_exitGame)
 	{
 		m_window.close();
 	}
+
+	updateBossMusic();
 
 	m_ammoText.setString("Ammo: " + std::to_string(m_player.getAmmo()));
 
@@ -888,6 +927,97 @@ foundDoor:
 		}
 	}
 
+	if (m_bossZombie && m_bossZombie->shouldSpawnMinions())
+	{
+		m_bossZombie->clearMinionSpawnFlag();
+		
+		// Spawn minions around the boss
+		sf::Vector2f bossPos = m_bossZombie->getPosition();
+		float spawnRadius = 150.f;
+		int minionCount = 3;
+		
+		for (int i = 0; i < minionCount; ++i)
+		{
+			float angle = (360.f / minionCount) * i;
+			float radians = angle * 3.14159f / 180.f;
+			
+			sf::Vector2f spawnOffset(
+				std::cos(radians) * spawnRadius,
+				std::sin(radians) * spawnRadius
+			);
+			
+			Minion minion(bossPos + spawnOffset);
+			m_minions.push_back(minion);
+		}
+		
+		std::cout << "Spawned " << minionCount << " minions!\n";
+	}
+
+	// Update minions
+	for (auto& minion : m_minions)
+	{
+		sf::Vector2f oldMinionPos = minion.getPosition();
+		
+		const auto& room = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
+		float tileW = (float)m_window.getSize().x / room.width;
+		float tileH = (float)m_window.getSize().y / room.height;
+		
+		minion.update(t_deltaTime, playerCenter, room.tiles, tileW, tileH);
+		
+		// Minion collision with walls
+		if (isCollidingWithWall(minion.getHitbox()))
+		{
+			sf::Vector2f newPos = minion.getPosition();
+			
+			// Try X-axis only
+			minion.setPosition(newPos.x, oldMinionPos.y);
+			if (isCollidingWithWall(minion.getHitbox()))
+			{
+				// Try Y-axis only
+				minion.setPosition(oldMinionPos.x, newPos.y);
+				if (isCollidingWithWall(minion.getHitbox()))
+				{
+					// Both axes collide, revert completely
+					minion.setPosition(oldMinionPos.x, oldMinionPos.y);
+				}
+			}
+		}
+		
+		// Minion attack player
+		int dmg = minion.tryDealDamage(m_debugPlayerBox);
+		if (dmg > 0)
+		{
+			m_player.takeDamage(dmg);
+			std::cout << "Minion dealt " << dmg << " damage! Player Health: " << m_player.getHealth() << "\n";
+		}
+	}
+
+	// Bullet collision with minions
+	for (auto& b : m_bullets)
+	{
+		if (!b.isAlive()) continue;
+
+		for (auto& minion : m_minions)
+		{
+			if (minion.isDead()) continue;
+
+			if (b.getBounds().intersects(minion.getHitbox()))
+			{
+				minion.takeDamage(25);
+				b.kill();
+				std::cout << "Hit minion!\n";
+			}
+		}
+	}
+
+	// Remove dead minions
+	m_minions.erase(
+		std::remove_if(m_minions.begin(), m_minions.end(),
+			[](const Minion& m) { return m.isDeathAnimationComplete(); }),
+		m_minions.end()
+	);
+
+
 	if (m_player.getHealth() <= 0)
 	{
 		std::cout << "GAME OVER - Player Health: " << m_player.getHealth() << "\n";
@@ -1315,7 +1445,7 @@ void Game::spawnDecorationsForRoom()
 				decoration.sprite.setPosition(decorationPos);
 				
 				// Random scale between 0.8 and 1.5
-				float scale = 0.8f + static_cast<float>(std::rand() % 70) / 100.f;
+				float scale = 1.0f + static_cast<float>(std::rand() % 70) / 100.f;
 				decoration.sprite.setScale(scale, scale);
 				
 				// Random rotation
@@ -1605,6 +1735,20 @@ void Game::render()
 		hb.setPosition(bossHitbox.left, bossHitbox.top);
 		hb.setSize({ bossHitbox.width, bossHitbox.height });
 		hb.setFillColor(sf::Color(255, 0, 255, 120));
+		m_window.draw(hb);
+	}
+
+	// Draw minions
+	for (auto& minion : m_minions)
+	{
+		minion.render(m_window);
+
+		// Debug hitbox for minion
+		sf::RectangleShape hb;
+		auto minionHitbox = minion.getHitbox();
+		hb.setPosition(minionHitbox.left, minionHitbox.top);
+		hb.setSize({ minionHitbox.width, minionHitbox.height });
+		hb.setFillColor(sf::Color(255, 255, 0, 120));
 		m_window.draw(hb);
 	}
 

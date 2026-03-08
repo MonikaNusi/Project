@@ -24,6 +24,7 @@
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MapGenerator.cpp" />
+    <ClCompile Include="Minion.cpp" />
     <ClCompile Include="Pathfinding.cpp" />
     <ClCompile Include="Pickup.cpp" />
     <ClCompile Include="Player.cpp" />
@@ -35,6 +36,7 @@
     <ClInclude Include="Bullet.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="MapGenerator.h" />
+    <ClInclude Include="Minion.h" />
     <ClInclude Include="Pathfinding.h" />
     <ClInclude Include="Pickup.h" />
     <ClInclude Include="Player.h" />

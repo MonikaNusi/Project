@@ -14,6 +14,7 @@ public:
 		Walking,
 		Charging,
 		BigAttack,
+		SummonMinions,
 		Dying
 	};
 
@@ -32,6 +33,8 @@ public:
 	sf::FloatRect getHitbox() const;
 
 	State getState() const { return m_state; }
+	bool shouldSpawnMinions() const { return m_shouldSpawnMinions; }
+	void clearMinionSpawnFlag() { m_shouldSpawnMinions = false; }
 
 	void update(
 		sf::Time dt,
@@ -81,6 +84,16 @@ private:
 	float m_chargeCooldown{ 0.f };
 	float m_chargeCooldownDuration{ 5.f };
 	sf::Vector2f m_chargeDirection{ 0.f, 0.f };
+
+	// Minion spawning
+	float m_summonTimer{ 0.f };
+	float m_summonDuration{ 1.5f };
+	float m_summonCooldown{ 0.f };
+	float m_summonCooldownDuration{ 15.f };
+	bool m_shouldSpawnMinions{ false };
+	int m_minionsToSpawn{ 3 };
+	int m_healthThresholdForSummon{ 250 };  // Summon at 50% health
+	bool m_hasSpawnedMinionsAtThreshold{ false };
 
 	bool m_hasDealtDamageThisAttack{ false };
 

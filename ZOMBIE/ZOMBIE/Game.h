@@ -6,6 +6,7 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include "Player.h"
 #include "MapGenerator.h"
 #include "Zombie.h"
@@ -15,6 +16,7 @@
 #include <map>
 #include "Bullet.h"
 #include "BossZombie.h"
+#include "Minion.h"
 
 class Game
 {
@@ -67,6 +69,7 @@ private:
 	void spawnPickupsForRoom();
 	void renderPickupPrompts();
 	void spawnDecorationsForRoom();
+	void updateBossMusic();
 
 	Player m_player;
 	MapGenerator m_mapGenerator;
@@ -178,4 +181,10 @@ private:
 	// Boss zombie
 	std::unique_ptr<BossZombie> m_bossZombie;
 	bool m_bossDefeated{ false };
+
+	// Boss music
+	sf::Music m_bossMusic;
+	bool m_bossMusixPlaying{ false };
+
+	std::vector<Minion> m_minions;
 };
