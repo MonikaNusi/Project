@@ -127,5 +127,9 @@ private:
 	sf::Sound m_chargeSound;
 
 	float m_roarTimer{ 0.f };
-	float m_roarInterval{ 4.f };	
+	float m_roarInterval{ 4.f };
+
+	// Hit flash effect
+	float m_hitFlashTimer{ 0.f };
+	float m_hitFlashDuration{ 0.15f };
 };

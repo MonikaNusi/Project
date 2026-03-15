@@ -21,7 +21,7 @@
 class Game
 {
 public:
-	Game();
+	Game(sf::RenderWindow& window);
 	~Game();
 	void run();
 
@@ -101,7 +101,7 @@ private:
 	// Store zombies per room using room coordinates as key
 	std::map<std::pair<int, int>, std::vector<Zombie>> m_roomZombies;
 
-	sf::RenderWindow m_window; // main SFML window
+	sf::RenderWindow& m_window; // Reference to main SFML window
 	bool m_exitGame{ false }; // control exiting game
 
 	// Key / unlock system

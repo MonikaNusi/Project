@@ -84,5 +84,9 @@ private:
     sf::RectangleShape m_healthBarFront;
     float m_healthBarHeight{ 4.f };
     float m_healthBarOffset{ 5.f };
+
+    // Hit flash effect
+    float m_hitFlashTimer{ 0.f };
+    float m_hitFlashDuration{ 0.15f };
 };
 

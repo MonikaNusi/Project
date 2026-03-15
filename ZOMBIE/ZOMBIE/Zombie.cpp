@@ -114,6 +114,9 @@ void Zombie::takeDamage(int dmg)
     m_health -= dmg;
     if (m_health < 0) m_health = 0;
     
+    // Trigger hit flash
+    m_hitFlashTimer = m_hitFlashDuration;
+    
     // death animation when health reaches 0
     if (m_health <= 0 && m_state != State::Dying)
     {
@@ -198,6 +201,15 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
         return;
 
     float ds = dt.asSeconds();
+    
+    // Update hit flash timer
+    if (m_hitFlashTimer > 0.f)
+    {
+        m_hitFlashTimer -= ds;
+        if (m_hitFlashTimer < 0.f)
+            m_hitFlashTimer = 0.f;
+    }
+    
     float dist = distanceTo(playerPos);
 
     // Update groan timer and play groan sound periodically
@@ -480,6 +492,23 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
 
 void Zombie::render(sf::RenderWindow& window)
 {
+    if (m_hitFlashTimer > 0.f)
+    {
+        float intensity = m_hitFlashTimer / m_hitFlashDuration;
+      
+        sf::Color flashColor(
+            255,
+            static_cast<sf::Uint8>(100 + (155 * (1.f - intensity))),
+            static_cast<sf::Uint8>(100 + (155 * (1.f - intensity)))
+        );
+        
+        m_sprite.setColor(flashColor);
+    }
+    else
+    {
+        m_sprite.setColor(sf::Color::White);
+    }
+    
     window.draw(m_sprite);
 
     if (m_state == State::Dying || m_deathAnimComplete)
@@ -560,6 +589,7 @@ void Zombie::reset(sf::Vector2f spawnPos)
 
     m_deathAnimComplete = false;
     
+    m_hitFlashTimer = 0.f;
     
     m_groanTimer = static_cast<float>(std::rand() % 100) / 100.0f * m_groanInterval;
     m_groanInterval = 3.f;

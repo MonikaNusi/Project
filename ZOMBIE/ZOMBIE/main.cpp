@@ -39,7 +39,7 @@ int main()
 		
 		if (result == MainMenu::MenuResult::Play)
 		{
-			Game game;
+			Game game(window);
 			game.run();
 		}
 	}

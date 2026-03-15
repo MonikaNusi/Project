@@ -158,6 +158,9 @@ void BossZombie::takeDamage(int dmg)
 	m_health -= dmg;
 	if (m_health < 0) m_health = 0;
 
+	// Trigger hit flash
+	m_hitFlashTimer = m_hitFlashDuration;
+
 	if (m_health <= 0 && m_state != State::Dying)
 	{
 		setState(State::Dying);
@@ -173,6 +176,14 @@ void BossZombie::update(sf::Time dt, sf::Vector2f playerPos,
 	{
 		animate(dt);
 		return;
+	}
+
+	// Update hit flash timer
+	if (m_hitFlashTimer > 0.f)
+	{
+		m_hitFlashTimer -= ds;
+		if (m_hitFlashTimer < 0.f)
+			m_hitFlashTimer = 0.f;
 	}
 
 	// Update cooldowns
@@ -327,6 +338,23 @@ void BossZombie::update(sf::Time dt, sf::Vector2f playerPos,
 
 void BossZombie::render(sf::RenderWindow& window)
 {
+	if (m_hitFlashTimer > 0.f)
+	{
+		float intensity = m_hitFlashTimer / m_hitFlashDuration;
+		
+		sf::Color flashColor(
+			255,
+			static_cast<sf::Uint8>(100 + (155 * (1.f - intensity))),
+			static_cast<sf::Uint8>(100 + (155 * (1.f - intensity)))
+		);
+		
+		m_sprite.setColor(flashColor);
+	}
+	else
+	{
+		m_sprite.setColor(sf::Color::White);
+	}
+
 	window.draw(m_sprite);
 
 	// Don't draw health bar if dead

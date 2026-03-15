@@ -12,8 +12,8 @@
 std::string zombieStateToString(Zombie::State state);
 
 
-Game::Game() :
-	m_window{ sf::VideoMode{ 1200U, 1000U, 32U }, "SFML Game" },
+Game::Game(sf::RenderWindow& window) :
+	m_window{ window },
 	m_mapGenerator(8, 6, 100)
 {
 	m_mapGenerator.generate();
@@ -336,7 +336,7 @@ void Game::update(sf::Time t_deltaTime)
 
 	float healthPercent = (float)m_player.getHealth() / m_player.getMaxHealth();
 	m_healthBarFront.setSize({ 200.f * healthPercent, 20.f });
-
+	
 
 
 	sf::FloatRect spriteBounds = m_player.getSpriteBounds();
@@ -1642,7 +1642,7 @@ void Game::render()
 	            float scaleY = tileH / texRect.height;
 	            tileSprite.setScale(scaleX, scaleY);
 	            
-	            
+            
 	            if (room.tiles[i][j] == 2) // locked door
 	            {
 	                //tileSprite.setColor(sf::Color(200, 160, 255));

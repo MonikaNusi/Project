@@ -171,5 +171,9 @@ private:
     sf::Sound m_groanSound;
     float m_groanTimer{ 0.f };
     float m_groanInterval{ 3.f };  // Time between groans
+
+    // Hit flash effect
+    float m_hitFlashTimer{ 0.f };
+    float m_hitFlashDuration{ 0.15f };
 };
 
