@@ -65,6 +65,12 @@ void Player::hadnleInput()
     else if (right)          m_currentRow = 5; 
 }
 
+void Player::setGunDirectionForShooting(Gun::Direction dir)
+{
+	m_overrideGunDirection = dir;
+	m_useOverrideDirection = true;
+}
+
 void Player::update(sf::Time dt)
 {
 	m_sprite.move(m_velocity * dt.asSeconds());
@@ -101,8 +107,17 @@ void Player::update(sf::Time dt)
 	if (m_fireCooldown > 0.f)
 		m_fireCooldown -= dt.asSeconds();
 
-	//Update gun
-	m_gun.setDirection(getGunDirection());
+	if (m_useOverrideDirection && (m_gun.isAnimating() || m_gun.isFlashPlaying()))
+	{
+		// Keep locked to shooting direction
+		m_gun.setDirection(m_overrideGunDirection);
+	}
+	else
+	{
+		m_useOverrideDirection = false;
+		m_gun.setDirection(getGunDirection());
+	}
+	
 	m_gun.setPosition(getPosition(), getSize());
 	m_gun.update(dt);
 }
@@ -115,7 +130,7 @@ sf::Vector2f Player::getSize() const
 void Player::render(sf::RenderWindow& window)
 {
 	window.draw(m_sprite);
-	m_gun.render(window);  //Draw gun on top of player
+	m_gun.render(window);
 }
 
 void Player::takeDamage(int dmg)
@@ -175,26 +190,24 @@ void Player::shoot()
 	}
 	m_shootSound.play();
 
-	//Play gun shoot animation
 	m_gun.playShootAnimation();
 }
 
-//Convert player direction to gun direction
 Gun::Direction Player::getGunDirection() const
 {
 	switch (m_currentRow)
 	{
-	case 0: // Down
+	case 0:
 		return Gun::Direction::Down;
-	case 1: // Down-left or Left
+	case 1:
 		return Gun::Direction::Left;
-	case 2: // Up-left
+	case 2:
 		return Gun::Direction::Left;
-	case 3: // Up
+	case 3:
 		return Gun::Direction::Up;
-	case 4: // Up-right
+	case 4:
 		return Gun::Direction::Right;
-	case 5: // Down-right or Right
+	case 5:
 		return Gun::Direction::Right;
 	default:
 		return Gun::Direction::Down;

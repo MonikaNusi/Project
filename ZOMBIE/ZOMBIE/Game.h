@@ -173,7 +173,7 @@ private:
 	sf::Texture m_healthPotionTexture;
 	sf::Texture m_ammoCrateTexture;
 
-	// Add to room storage
+
 	std::map<std::pair<int, int>, std::vector<DroppedItem>> m_roomDroppedItems;
 
 	std::vector<Decoration> m_decorations;

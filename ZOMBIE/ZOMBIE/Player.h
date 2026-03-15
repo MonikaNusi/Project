@@ -34,6 +34,8 @@ public:
 
 	Gun::Direction getGunDirection() const;
 	const Gun& getGun() const { return m_gun; }
+	
+	void setGunDirectionForShooting(Gun::Direction dir);
 
 private:
 	sf::Sprite m_sprite;
@@ -75,6 +77,8 @@ private:
 	sf::SoundBuffer m_pickupBuffer;
 	sf::Sound m_pickupSound;
 
-	Gun m_gun; 
+	Gun m_gun;
+	Gun::Direction m_overrideGunDirection;
+	bool m_useOverrideDirection{ false };
 };
 

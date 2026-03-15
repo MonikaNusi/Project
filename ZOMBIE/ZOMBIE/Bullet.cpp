@@ -2,7 +2,6 @@
 #include <cmath>
 #include <iostream>
 
-// Initialize static members
 sf::Texture Bullet::m_texture;
 bool Bullet::m_textureLoaded = false;
 

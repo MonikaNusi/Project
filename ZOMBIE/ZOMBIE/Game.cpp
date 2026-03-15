@@ -184,16 +184,37 @@ void Game::processEvents()
 		{
 			if (m_player.canShoot())
 			{
-				// shoot 
-				sf::Vector2f bulletSpawn = m_player.getGun().getBarrelPosition();
-
-				// mouse position
+				// Get mouse position
 				sf::Vector2i mousePixel = sf::Mouse::getPosition(m_window);
 				sf::Vector2f mouseWorld = m_window.mapPixelToCoords(mousePixel, m_cameraView);
-				sf::Vector2f dir = mouseWorld - bulletSpawn;
+				
+				// Calculate direction from player to mouse
+				sf::Vector2f playerPos = m_player.getPosition();
+				sf::Vector2f playerSize = m_player.getSize();
+				sf::Vector2f playerCenter = playerPos + playerSize / 2.f;
+				sf::Vector2f aimDir = mouseWorld - playerCenter;
+				
+				// Determine gun direction based on mouse angle
+				Gun::Direction gunDir;
+				if (std::abs(aimDir.x) > std::abs(aimDir.y))
+				{
+					// Mouse is more horizontal - use left or right
+					gunDir = (aimDir.x > 0) ? Gun::Direction::Right : Gun::Direction::Left;
+				}
+				else
+				{
+					// Mouse is more vertical - use up or down
+					gunDir = (aimDir.y > 0) ? Gun::Direction::Down : Gun::Direction::Up;
+				}
+				
+				// Temporarily set gun direction for shooting
+				m_player.setGunDirectionForShooting(gunDir);
+				
+				// Get bullet spawn position
+				sf::Vector2f bulletSpawn = m_player.getGun().getBarrelPosition();
 
-				m_player.shoot(); // reduces ammo, sets cooldown
-				m_bullets.emplace_back(bulletSpawn, dir);
+				m_player.shoot();
+				m_bullets.emplace_back(bulletSpawn, aimDir);
 			}
 		}
 	}

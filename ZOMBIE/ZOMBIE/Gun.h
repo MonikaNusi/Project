@@ -23,6 +23,7 @@ public:
     
     void playShootAnimation();
     bool isAnimating() const { return m_isAnimating; }
+    bool isFlashPlaying() const { return m_flashPlaying; }
     
     sf::Vector2f getBarrelPosition() const;
 
