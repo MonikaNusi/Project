@@ -1,6 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
+#include "Gun.h" 
 
 class Player
 {
@@ -31,6 +32,9 @@ public:
 
 	void playPickupSound();
 
+	Gun::Direction getGunDirection() const;
+	const Gun& getGun() const { return m_gun; }
+
 private:
 	sf::Sprite m_sprite;
 	sf::Texture m_texture;
@@ -56,7 +60,7 @@ private:
 	void animate(sf::Time dt);
 	int getAnimationRow(bool up, bool down, bool left, bool right) const;
 
-	// Footstep soundS
+	// Footstep sounds
 	sf::SoundBuffer m_footstepBuffer;
 	sf::Sound m_footstepSound;
 	float m_footstepTimer{ 0.f };
@@ -70,5 +74,7 @@ private:
 	// Pickup sound
 	sf::SoundBuffer m_pickupBuffer;
 	sf::Sound m_pickupSound;
+
+	Gun m_gun; 
 };
 

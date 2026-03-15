@@ -27,6 +27,9 @@ Player::Player()
 	}
 	m_shootSound.setBuffer(m_shootBuffer);
 	m_shootSound.setVolume(30.f);
+
+
+	m_gun.loadTextures();
 }
 
 void Player::hadnleInput()
@@ -97,6 +100,11 @@ void Player::update(sf::Time dt)
 
 	if (m_fireCooldown > 0.f)
 		m_fireCooldown -= dt.asSeconds();
+
+	//Update gun
+	m_gun.setDirection(getGunDirection());
+	m_gun.setPosition(getPosition(), getSize());
+	m_gun.update(dt);
 }
 
 sf::Vector2f Player::getSize() const
@@ -107,6 +115,7 @@ sf::Vector2f Player::getSize() const
 void Player::render(sf::RenderWindow& window)
 {
 	window.draw(m_sprite);
+	m_gun.render(window);  //Draw gun on top of player
 }
 
 void Player::takeDamage(int dmg)
@@ -158,18 +167,60 @@ void Player::shoot()
 {
 	m_fireCooldown = m_fireRate;
 	m_ammo--;
-	
-	// Stop previous shot if still playing, then play new one
+
+
 	if (m_shootSound.getStatus() == sf::Sound::Playing)
 	{
 		m_shootSound.stop();
 	}
 	m_shootSound.play();
+
+	//Play gun shoot animation
+	m_gun.playShootAnimation();
+}
+
+//Convert player direction to gun direction
+Gun::Direction Player::getGunDirection() const
+{
+	switch (m_currentRow)
+	{
+	case 0: // Down
+		return Gun::Direction::Down;
+	case 1: // Down-left or Left
+		return Gun::Direction::Left;
+	case 2: // Up-left
+		return Gun::Direction::Left;
+	case 3: // Up
+		return Gun::Direction::Up;
+	case 4: // Up-right
+		return Gun::Direction::Right;
+	case 5: // Down-right or Right
+		return Gun::Direction::Right;
+	default:
+		return Gun::Direction::Down;
+	}
 }
 
 void Player::addAmmo(int amount)
 {
 	m_ammo = std::min(m_ammo + amount, m_maxAmmo);
+}
+
+void Player::playPickupSound()
+{
+	static bool loaded = false;
+	if (!loaded)
+	{
+		if (!m_pickupBuffer.loadFromFile("ASSETS\\SOUNDS\\Pickup.wav"))
+		{
+			std::cout << "Failed to load pickup sound\n";
+		}
+		m_pickupSound.setBuffer(m_pickupBuffer);
+		m_pickupSound.setVolume(50.f);
+		loaded = true;
+	}
+	
+	m_pickupSound.play();
 }
 
 

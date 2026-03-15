@@ -133,6 +133,8 @@ Game::Game(sf::RenderWindow& window) :
 		m_bossMusic.setVolume(50.f);
 		std::cout << "Successfully loaded boss music\n";
 	}
+
+	Bullet::loadTexture();
 }
 
 Game::~Game()
@@ -183,17 +185,15 @@ void Game::processEvents()
 			if (m_player.canShoot())
 			{
 				// shoot 
-				sf::Vector2f playerPos = m_player.getPosition();
-				sf::Vector2f playerSize = m_player.getSize();
-				sf::Vector2f playerCenter = playerPos + playerSize / 2.f;
+				sf::Vector2f bulletSpawn = m_player.getGun().getBarrelPosition();
 
 				// mouse position
 				sf::Vector2i mousePixel = sf::Mouse::getPosition(m_window);
 				sf::Vector2f mouseWorld = m_window.mapPixelToCoords(mousePixel, m_cameraView);
-				sf::Vector2f dir = mouseWorld - playerCenter;
+				sf::Vector2f dir = mouseWorld - bulletSpawn;
 
 				m_player.shoot(); // reduces ammo, sets cooldown
-				m_bullets.emplace_back(playerCenter, dir);
+				m_bullets.emplace_back(bulletSpawn, dir);
 			}
 		}
 	}
@@ -1428,7 +1428,7 @@ void Game::spawnDecorationsForRoom()
 	switch (room.type)
 	{
 	case MapGenerator::Room::RoomType::Treasure:
-		boneCount = 2; 
+		boneCount = 2;
 		break;
 	case MapGenerator::Room::RoomType::Boss:
 		boneCount = 8;
@@ -1437,7 +1437,7 @@ void Game::spawnDecorationsForRoom()
 		boneCount = 3 + (std::rand() % 3);
 		break;
 	case MapGenerator::Room::RoomType::Trap:
-		boneCount = 5 + (std::rand() % 4); 
+		boneCount = 5 + (std::rand() % 4);
 		break;
 	case MapGenerator::Room::RoomType::Start:
 		boneCount = 2;
@@ -1484,7 +1484,6 @@ void Game::spawnDecorationsForRoom()
 				
 				decoration.sprite.setPosition(decorationPos);
 				
-				// Random scale between 0.8 and 1.5
 				float scale = 1.0f + static_cast<float>(std::rand() % 70) / 100.f;
 				decoration.sprite.setScale(scale, scale);
 				
@@ -1499,11 +1498,12 @@ void Game::spawnDecorationsForRoom()
 		}
 	}
 
+
+
 	// Store decorations for this room
 	m_roomDecorations[roomKey] = m_decorations;
+	
 
-	std::cout << "Spawned " << boneCount << " bone decorations in room (" 
-		<< m_currentRoom.x << "," << m_currentRoom.y << ")\n";
 }
 
 sf::Vector2f Game::findSafeSpawn(const MapGenerator::Room& room)
