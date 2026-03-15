@@ -43,7 +43,7 @@ Game::Game() :
 	spawnZombiesForRoom();
 	
 
-	if (!m_debugFont.loadFromFile("ASSETS/FONTS/ariblk.ttf"))
+	if (!m_debugFont.loadFromFile("ASSETS/FONTS/zombie.ttf"))
 	{
 		std::cout << "Failed to load debug font\n";
 	}
@@ -340,7 +340,6 @@ void Game::update(sf::Time t_deltaTime)
 
 
 	sf::FloatRect spriteBounds = m_player.getSpriteBounds();
-
 
 
 
@@ -819,7 +818,7 @@ foundDoor:
 			sf::Vector2f doorPos = getDoorSpawn(nextRoom, dirX, dirY);
 			m_player.setPosition(doorPos.x, doorPos.y); //place the player at the correct door
 
-			
+	
 
 
 			//read slide offst and camera

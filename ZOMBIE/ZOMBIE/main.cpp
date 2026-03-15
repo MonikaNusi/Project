@@ -21,11 +21,28 @@
 
 
 #include "Game.h"
+#include "MainMenu.h"
 
 int main()
 {
-	Game game;
-	game.run();
-
-	return 1;
+	sf::RenderWindow window(sf::VideoMode(1200U, 1000U, 32U), "SFML Game");
+	
+	while (window.isOpen())
+	{
+		MainMenu menu;
+		MainMenu::MenuResult result = menu.show(window);
+		
+		if (result == MainMenu::MenuResult::Exit)
+		{
+			break;
+		}
+		
+		if (result == MainMenu::MenuResult::Play)
+		{
+			Game game;
+			game.run();
+		}
+	}
+	
+	return 0;
 }

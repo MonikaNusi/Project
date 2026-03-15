@@ -94,7 +94,7 @@ private:
 	std::vector<Pickup> m_pickups;
 	sf::Texture m_healthChestClosedTexture;
 	sf::Texture m_healthChestOpenTexture;
-sf::Texture m_ammoChestClosedTexture;
+	sf::Texture m_ammoChestClosedTexture;
 	sf::Texture m_ammoChestOpenTexture;
 	std::map<std::pair<int, int>, std::vector<Pickup>> m_roomPickups;
 
