@@ -292,24 +292,46 @@ void Gun::playShootAnimation()
 
 sf::Vector2f Gun::getBarrelPosition() const
 {
-    sf::Vector2f gunPos = m_sprite.getPosition();
-    sf::Vector2f barrelOffset;
-    
+    // Use the sprite's current texture rect and transform to compute an accurate barrel/world position.
+    // This accounts for the sprite's origin, scale and any per-frame textureRect changes.
+    sf::IntRect texRect = m_sprite.getTextureRect();
+
+    // Local coordinates (relative to the sprite's local space - top-left of the textureRect).
+    // Add a small padding (4 px) so the barrel is slightly outside the gun sprite.
+    const float padding = 4.f;
+
+    sf::Vector2f localPoint;
+
+    if (texRect.width == 0 || texRect.height == 0)
+    {
+        // fallback - should not happen but safe guard
+        return m_sprite.getPosition();
+    }
+
     switch (m_currentDirection)
     {
     case Direction::Down:
-        barrelOffset = sf::Vector2f(0.f, 20.f * m_baseScale);
+        // middle bottom of the texture rect, just below
+        localPoint = sf::Vector2f(static_cast<float>(texRect.left) + texRect.width * 0.5f,
+                                  static_cast<float>(texRect.top + texRect.height) + padding);
         break;
     case Direction::Up:
-        barrelOffset = sf::Vector2f(0.f, -20.f * m_baseScale);
+        // middle top of the texture rect, just above
+        localPoint = sf::Vector2f(static_cast<float>(texRect.left) + texRect.width * 0.5f,
+                                  static_cast<float>(texRect.top) - padding);
         break;
     case Direction::Left:
-        barrelOffset = sf::Vector2f(-25.f * m_baseScale, 0.f);
+        // left middle, just left of the texture rect
+        localPoint = sf::Vector2f(static_cast<float>(texRect.left) - padding,
+                                  static_cast<float>(texRect.top) + texRect.height * 0.5f);
         break;
     case Direction::Right:
-        barrelOffset = sf::Vector2f(25.f * m_baseScale, 0.f);
+        // right middle, just right of the texture rect
+        localPoint = sf::Vector2f(static_cast<float>(texRect.left + texRect.width) + padding,
+                                  static_cast<float>(texRect.top) + texRect.height * 0.5f);
         break;
     }
-    
-    return gunPos + barrelOffset;
+
+    // Transform the local point into world coordinates using the sprite transform
+    return m_sprite.getTransform().transformPoint(localPoint);
 }

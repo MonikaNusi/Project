@@ -1579,7 +1579,7 @@ sf::Vector2f Game::getDoorSpawn(const MapGenerator::Room& room,
 
 	// Coming from left - spawn at left door
 	if (dirX == 1)     return { 1 * tileW,       midY * tileH };
-	// Coming from right - spawn at right door
+	// Coming from right - spawn at right doorww
 	if (dirX == -1)    return { (room.width - 2) * tileW, midY * tileH };
 	// Coming from top - spawn at top door
 	if (dirY == 1)     return { midX * tileW,    1 * tileH };

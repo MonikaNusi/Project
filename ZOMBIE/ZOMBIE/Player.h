@@ -45,10 +45,10 @@ private:
 	float m_speed{ 200.f };
 
 	float m_fireCooldown = 0.f;
-	float m_fireRate = 0.25f;
+	float m_fireRate = 0.0f;
 
-	int m_ammo = 100; 
-	int m_maxAmmo = 100;
+	int m_ammo = 10000; 
+	int m_maxAmmo = 10000;
 
 	int m_health = 100;
 	int m_maxHealth = 100;
