@@ -9,6 +9,84 @@
 #include <cmath>
 #include <cstdlib>
 
+static void drawLightOverlay(sf::RenderWindow &window, const sf::Vector2f &playerCenter, int windowW, int windowH)
+{
+    static sf::Texture lightTex;
+    static bool generated = false;
+    static const int texRadius = 256;
+
+    if (!generated)
+    {
+        generated = true;
+        const int texSize = texRadius * 2;
+        sf::Image img;
+        img.create(texSize, texSize, sf::Color::Black);
+
+        for (int y = 0; y < texSize; ++y)
+        {
+            for (int x = 0; x < texSize; ++x)
+            {
+                float dx = (x + 0.5f - texRadius) / static_cast<float>(texRadius);
+                float dy = (y + 0.5f - texRadius) / static_cast<float>(texRadius);
+                float d = std::sqrt(dx * dx + dy * dy);
+
+                float t = std::max(0.f, 1.0f - d);
+      
+                float brightness = t * t;
+
+                sf::Uint8 v = static_cast<sf::Uint8>(255.f * brightness);
+                img.setPixel(x, y, sf::Color(v, v, v, 255));
+            }
+        }
+
+        lightTex.loadFromImage(img);
+        lightTex.setSmooth(true);
+    }
+
+    static sf::RenderTexture lightMap;
+    static bool lightMapCreated = false;
+    static int cachedW = 0, cachedH = 0;
+
+    if (!lightMapCreated || cachedW != windowW || cachedH != windowH)
+    {
+        lightMap.create(windowW, windowH);
+        lightMapCreated = true;
+        cachedW = windowW;
+        cachedH = windowH;
+    }
+
+   
+    const sf::Uint8 ambient = 80;
+    lightMap.clear(sf::Color(ambient, ambient, ambient, 255));
+
+    // Match the world view so the light follows the player in world space
+    lightMap.setView(window.getView());
+
+    // Draw the radial light at the player position
+    sf::Sprite light(lightTex);
+    light.setOrigin(static_cast<float>(texRadius), static_cast<float>(texRadius));
+    light.setPosition(playerCenter);
+
+    // how many world-pixels the light should reach
+    const float desiredRadius = 280.f;
+    float scale = desiredRadius / static_cast<float>(texRadius);
+    light.setScale(scale, scale);
+
+    // Slight warm tint
+    light.setColor(sf::Color(255, 120, 20, 255));
+
+    // Additive blend so the light brightens beyond the ambient level
+    lightMap.draw(light, sf::BlendAdd);
+    lightMap.display();
+
+    sf::Sprite overlay(lightMap.getTexture());
+
+    window.setView(window.getDefaultView());
+    window.draw(overlay, sf::BlendMultiply);
+
+    window.setView(window.getView());
+}
+
 std::string zombieStateToString(Zombie::State state);
 
 
@@ -361,7 +439,7 @@ void Game::update(sf::Time t_deltaTime)
 
 
 	sf::FloatRect spriteBounds = m_player.getSpriteBounds();
-
+	
 
 
 	float hbWidthPercent = 0.30f;
@@ -1838,6 +1916,17 @@ void Game::render()
 	}
 
 
+
+	sf::Vector2f playerPos = m_player.getPosition();
+	sf::Vector2f playerSize = m_player.getSize();
+	sf::Vector2f playerCenter = playerPos + playerSize / 2.f;
+
+	drawLightOverlay(m_window, playerCenter, windowW, windowH);
+
+	m_window.setView(m_cameraView);
+
+	m_window.setView(m_window.getDefaultView());
+
 	sf::RectangleShape hb;
 	hb.setPosition(m_debugPlayerBox.left, m_debugPlayerBox.top);
 	hb.setSize({ m_debugPlayerBox.width, m_debugPlayerBox.height });
@@ -1967,7 +2056,6 @@ void Game::drawMiniMap()
 			m_window.draw(cell);
 		}
 	}
-
 }
 
 // Draw "Press E" prompt for nearby chests
@@ -2020,9 +2108,9 @@ sf::Vector2f Game::findUniqueSpawn(const MapGenerator::Room& room,
 
 	// Try up to 50 times to find a unique spawn position
 	for (int attempt = 0; attempt < 50; ++attempt)
-	{
+{
 		// Generate random position on a floor tile
-		int x = 2 + (std::rand() % (room.width - 4));
+		int x =  2 + (std::rand() % (room.width - 4));
 		int y = 2 + (std::rand() % (room.height - 4));
 
 		if (room.tiles[y][x] != 0) continue;  // Not a floor tile

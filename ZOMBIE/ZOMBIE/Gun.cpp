@@ -292,46 +292,42 @@ void Gun::playShootAnimation()
 
 sf::Vector2f Gun::getBarrelPosition() const
 {
-    // Use the sprite's current texture rect and transform to compute an accurate barrel/world position.
-    // This accounts for the sprite's origin, scale and any per-frame textureRect changes.
-    sf::IntRect texRect = m_sprite.getTextureRect();
+    sf::IntRect texRect;
+    switch (m_currentDirection)
+    {
+    case Direction::Down:
+    case Direction::Up:
+        texRect = sf::IntRect(0, 0, 5, 17);
+        break;
+    case Direction::Left:
+    case Direction::Right:
+        texRect = sf::IntRect(0, 0, 18, 10);
+        break;
+    }
 
-    // Local coordinates (relative to the sprite's local space - top-left of the textureRect).
-    // Add a small padding (4 px) so the barrel is slightly outside the gun sprite.
     const float padding = 4.f;
 
     sf::Vector2f localPoint;
 
-    if (texRect.width == 0 || texRect.height == 0)
-    {
-        // fallback - should not happen but safe guard
-        return m_sprite.getPosition();
-    }
-
     switch (m_currentDirection)
     {
     case Direction::Down:
-        // middle bottom of the texture rect, just below
-        localPoint = sf::Vector2f(static_cast<float>(texRect.left) + texRect.width * 0.5f,
-                                  static_cast<float>(texRect.top + texRect.height) + padding);
+        localPoint = sf::Vector2f(texRect.width * 0.5f,
+                                  static_cast<float>(texRect.height) + padding);
         break;
     case Direction::Up:
-        // middle top of the texture rect, just above
-        localPoint = sf::Vector2f(static_cast<float>(texRect.left) + texRect.width * 0.5f,
-                                  static_cast<float>(texRect.top) - padding);
+        localPoint = sf::Vector2f(texRect.width * 0.5f,
+                                  -padding);
         break;
     case Direction::Left:
-        // left middle, just left of the texture rect
-        localPoint = sf::Vector2f(static_cast<float>(texRect.left) - padding,
-                                  static_cast<float>(texRect.top) + texRect.height * 0.5f);
+        localPoint = sf::Vector2f(-padding,
+                                  texRect.height * 0.5f);
         break;
     case Direction::Right:
-        // right middle, just right of the texture rect
-        localPoint = sf::Vector2f(static_cast<float>(texRect.left + texRect.width) + padding,
-                                  static_cast<float>(texRect.top) + texRect.height * 0.5f);
+        localPoint = sf::Vector2f(static_cast<float>(texRect.width) + padding,
+                                  texRect.height * 0.5f);
         break;
     }
 
-    // Transform the local point into world coordinates using the sprite transform
     return m_sprite.getTransform().transformPoint(localPoint);
 }
