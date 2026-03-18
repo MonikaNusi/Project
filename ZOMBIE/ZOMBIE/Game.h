@@ -17,15 +17,18 @@
 #include "Bullet.h"
 #include "BossZombie.h"
 #include "Minion.h"
+#include "dificultySetting.h"
 
 class Game
 {
 public:
-	Game(sf::RenderWindow& window);
+	Game(sf::RenderWindow& window, const DifficultySettings& difficulty);
 	~Game();
 	void run();
 
 private:
+
+	DifficultySettings m_difficulty;
 
 	enum class TransitionState { None,Sliding };
 	TransitionState m_transitionState{ TransitionState::None };

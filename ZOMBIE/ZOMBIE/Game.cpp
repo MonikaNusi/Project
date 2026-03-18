@@ -10,7 +10,8 @@
 #include <cstdlib>
 
 static void drawLightOverlay(sf::RenderWindow &window, const sf::Vector2f &playerCenter, 
-    const std::vector<sf::Vector2f>& torchPositions, int windowW, int windowH)
+    const std::vector<sf::Vector2f>& torchPositions, int windowW, int windowH,
+    int ambient, float playerRadius, float torchRadius)
 {
     static sf::Texture lightTex;
     static bool generated = false;
@@ -55,19 +56,17 @@ static void drawLightOverlay(sf::RenderWindow &window, const sf::Vector2f &playe
         cachedH = windowH;
     }
 
-    const sf::Uint8 ambient = 80;
-    lightMap.clear(sf::Color(ambient, ambient, ambient, 255));
+    const sf::Uint8 amb = static_cast<sf::Uint8>(ambient);
+    lightMap.clear(sf::Color(amb, amb, amb, 255));
 
     lightMap.setView(window.getView());
 
-    // Player light (large, warm orange)
     {
         sf::Sprite light(lightTex);
         light.setOrigin(static_cast<float>(texRadius), static_cast<float>(texRadius));
         light.setPosition(playerCenter);
 
-        const float desiredRadius = 280.f;
-        float scale = desiredRadius / static_cast<float>(texRadius);
+        float scale = playerRadius / static_cast<float>(texRadius);
         light.setScale(scale, scale);
         light.setColor(sf::Color(255, 120, 20, 255));
 
@@ -81,7 +80,7 @@ static void drawLightOverlay(sf::RenderWindow &window, const sf::Vector2f &playe
         light.setOrigin(static_cast<float>(texRadius), static_cast<float>(texRadius));
         light.setPosition(torchPos);
 
-        const float torchRadius = 140.f;
+        //const float torchRadius = 140.f;
         float scale = torchRadius / static_cast<float>(texRadius);
         light.setScale(scale, scale);
         light.setColor(sf::Color(200, 100, 15, 255));
@@ -102,10 +101,13 @@ static void drawLightOverlay(sf::RenderWindow &window, const sf::Vector2f &playe
 std::string zombieStateToString(Zombie::State state);
 
 
-Game::Game(sf::RenderWindow& window) :
+Game::Game(sf::RenderWindow& window, const DifficultySettings& difficulty) :
 	m_window{ window },
-	m_mapGenerator(8, 6, 100)
+	m_mapGenerator(8, 6, 100),
+	m_difficulty{ difficulty }
 {
+	m_player.applyDifficulty(m_difficulty);
+
 	m_mapGenerator.generate();
 
 	for (int y = 0; y < 6; ++y)
@@ -1083,6 +1085,7 @@ foundDoor:
 			);
 			
 			Minion minion(bossPos + spawnOffset);
+			minion.applyDifficulty(m_difficulty.minionHealth, m_difficulty.minionDamage);
 			m_minions.push_back(minion);
 		}
 		
@@ -1184,16 +1187,16 @@ void Game::spawnZombiesForRoom()
 	switch (room.type)
 	{
 	case MapGenerator::Room::RoomType::Normal:
-		zombieCount = 2;
-		minionCount = 2 + (std::rand() % 2);
+		zombieCount = m_difficulty.zombieCountNormal;
+		minionCount = m_difficulty.minionCountNormal + (std::rand() % 2);
 		break;
 	case MapGenerator::Room::RoomType::Trap:
-		zombieCount = 2;
-		minionCount = 4 + (std::rand() % 5);
+		zombieCount = m_difficulty.zombieCountTrap;
+		minionCount = m_difficulty.minionCountTrap + (std::rand() % 3);
 		break;
 	case MapGenerator::Room::RoomType::Treasure:
-		zombieCount = 1;
-		minionCount = 3 + (std::rand() % 4);
+		zombieCount = m_difficulty.zombieCountTreasure;
+		minionCount = m_difficulty.minionCountTreasure + (std::rand() % 2);
 		break;
 	case MapGenerator::Room::RoomType::Boss:
 		zombieCount = 0;
@@ -1203,12 +1206,13 @@ void Game::spawnZombiesForRoom()
 		{
 			sf::Vector2f bossSpawn = findSafeSpawn(room);
 			m_bossZombie = std::make_unique<BossZombie>(bossSpawn);
+			m_bossZombie->applyDifficulty(m_difficulty.bossHealth);
 			std::cout << "Boss zombie spawned!\n";
 		}
 		break;
 	case MapGenerator::Room::RoomType::Start:
-		zombieCount = 1;
-		minionCount = 0;
+		zombieCount = m_difficulty.zombieCountStart;
+		minionCount = m_difficulty.minionCountStart;
 		break;
 	default:
 		zombieCount = 1;
@@ -1227,20 +1231,20 @@ void Game::spawnZombiesForRoom()
 		
 		Zombie z(m_zombieTexture);
 		z.reset(spawn);
+		z.applyDifficulty(m_difficulty.zombieHealth, m_difficulty.zombieDamage);
 		m_zombies.push_back(z);
 	}
 
-	// Spawn minions
 	for (int i = 0; i < minionCount; ++i)
 	{
 		sf::Vector2f spawn = findUniqueSpawn(room, usedPositions, minSpawnDistance);
 		usedPositions.push_back(spawn);
 		
 		Minion minion(spawn);
+		minion.applyDifficulty(m_difficulty.minionHealth, m_difficulty.minionDamage);
 		m_minions.push_back(minion);
 	}
 
-	// randomly assign one zombie to carry the key
 	if (!m_zombies.empty())
 	{
 		int idx = std::rand() % static_cast<int>(m_zombies.size());
@@ -1396,16 +1400,16 @@ void Game::spawnTrapsForRoom()
 	switch (room.type)
 	{
 	case MapGenerator::Room::RoomType::Trap:
-		trapCount = 8;
+		trapCount = m_difficulty.trapCountTrap;
 		break;
 	case MapGenerator::Room::RoomType::Normal:
-		trapCount = 3;
+		trapCount = m_difficulty.trapCountNormal;
 		break;
 	case MapGenerator::Room::RoomType::Boss:
-		trapCount = 10;
+		trapCount = m_difficulty.trapCountBoss;
 		break;
 	default:
-		trapCount = 1;
+		trapCount = m_difficulty.trapCountDefault;
 		break;
 	}
 
@@ -1492,7 +1496,9 @@ void Game::spawnPickupsForRoom()
 		break;
 	}
 
-	// Spawn health chests
+	int healthRange = m_difficulty.healthPickupMax - m_difficulty.healthPickupMin + 1;
+	int ammoRange = m_difficulty.ammoPickupMax - m_difficulty.ammoPickupMin + 1;
+
 	for (int i = 0; i < healthCount; ++i)
 	{
 		int attempts = 0;
@@ -1508,7 +1514,7 @@ void Game::spawnPickupsForRoom()
 					y * tileH + tileH * 0.5f
 				);
 
-				int healAmount = 25 + (std::rand() % 26);  // 25-50 HP
+				int healAmount = m_difficulty.healthPickupMin + (std::rand() % healthRange);
 				Pickup pickup(pickupPos, Pickup::Type::Health, healAmount, 
 					m_healthChestClosedTexture, m_healthChestOpenTexture);
 				m_pickups.push_back(pickup);
@@ -1534,7 +1540,7 @@ void Game::spawnPickupsForRoom()
 					y * tileH + tileH * 0.5f
 				);
 
-				int ammoAmount = 20 + (std::rand() % 11);  // 20-30 ammo
+				int ammoAmount = m_difficulty.ammoPickupMin + (std::rand() % ammoRange);
 				Pickup pickup(pickupPos, Pickup::Type::Ammo, ammoAmount, 
 					m_ammoChestClosedTexture, m_ammoChestOpenTexture);
 				m_pickups.push_back(pickup);
@@ -1980,7 +1986,7 @@ void Game::render()
 		torchPositions.push_back(torch.pos);
 	}
 
-	drawLightOverlay(m_window, playerCenter, torchPositions, windowW, windowH);
+	drawLightOverlay(m_window, playerCenter, torchPositions, windowW, windowH, m_difficulty.ambientLight, m_difficulty.playerLightRadius, m_difficulty.torchLightRadius);
 
 	m_window.setView(m_cameraView);
 
@@ -2234,7 +2240,7 @@ sf::Vector2f Game::findUniqueSpawn(const MapGenerator::Room& room,
 	float tileH = (float)windowH / room.height;
 
 	// Try up to 50 times to find a unique spawn position
-	for (int attempt = 0; attempt < 50; ++attempt)
+	for (int attempt = 0; attempt < 50; attempt++)
 {
 		// Generate random position on a floor tile
 		int x =  2 + (std::rand() % (room.width - 4));

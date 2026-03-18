@@ -500,3 +500,10 @@ void BossZombie::animate(sf::Time dt)
 		}
 	}
 }
+
+void BossZombie::applyDifficulty(int health)
+{
+	m_maxHealth = health;
+	m_health = health;
+	m_healthThresholdForSummon = health / 2;
+}

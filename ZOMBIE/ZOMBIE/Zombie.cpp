@@ -563,7 +563,7 @@ int Zombie::tryDealDamage(const sf::FloatRect& playerHitbox)
         if (getHitbox().intersects(playerHitbox))
         {
             m_hasDealtDamageThisAttack = true;
-            return 10;
+            return m_damage;
         }
     }
     return 0;
@@ -691,6 +691,13 @@ void Zombie::setHasKey(bool v)
 bool Zombie::hasKey() const
 {
     return m_hasKey;
+}
+
+void Zombie::applyDifficulty(int health, int damage)
+{
+    m_maxHealth = health;
+    m_health = health;
+    m_damage = damage;
 }
 
 

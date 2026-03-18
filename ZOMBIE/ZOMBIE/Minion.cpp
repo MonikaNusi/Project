@@ -268,7 +268,7 @@ int Minion::tryDealDamage(const sf::FloatRect& playerHitbox)
         {
             m_hasDealtDamageThisAttack = true;
             std::cout << "[Minion] Hit player!\n";
-            return 15;  // Minion damage
+            return m_damage;  // Minion damage
         }
     }
     
@@ -346,4 +346,10 @@ void Minion::animate(sf::Time dt)
     {
         m_sprite.setScale(-m_baseScale, m_baseScale);
     }
+}
+void Minion::applyDifficulty(int health, int damage)
+{
+    m_maxHealth = health;
+    m_health = health;
+    m_damage = damage;
 }

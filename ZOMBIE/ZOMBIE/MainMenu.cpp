@@ -33,6 +33,26 @@ MainMenu::MainMenu()
     m_exitText.setString("EXIT");
     m_exitText.setCharacterSize(60);
     m_exitText.setFillColor(sf::Color(200, 200, 200));
+
+    m_difficultyLabel.setFont(m_font);
+    m_difficultyLabel.setString("DIFFICULTY");
+    m_difficultyLabel.setCharacterSize(40);
+    m_difficultyLabel.setFillColor(sf::Color(180, 180, 180));
+
+    m_easyText.setFont(m_font);
+    m_easyText.setString("EASY");
+    m_easyText.setCharacterSize(40);
+    m_easyText.setFillColor(sf::Color(200, 200, 200));
+
+    m_mediumText.setFont(m_font);
+    m_mediumText.setString("MEDIUM");
+    m_mediumText.setCharacterSize(40);
+    m_mediumText.setFillColor(sf::Color(200, 200, 200));
+
+    m_hardText.setFont(m_font);
+    m_hardText.setString("HARD");
+    m_hardText.setCharacterSize(40);
+    m_hardText.setFillColor(sf::Color(200, 200, 200));
 }
 
 MainMenu::MenuResult MainMenu::show(sf::RenderWindow& window)
@@ -51,15 +71,31 @@ MainMenu::MenuResult MainMenu::show(sf::RenderWindow& window)
  
     sf::FloatRect titleBounds = m_titleText.getLocalBounds();
     m_titleText.setOrigin(titleBounds.width / 2.f, titleBounds.height / 2.f);
-    m_titleText.setPosition(centerX, centerY - 200.f);
+    m_titleText.setPosition(centerX, centerY - 250.f);
     
     sf::FloatRect playBounds = m_playText.getLocalBounds();
     m_playText.setOrigin(playBounds.width / 2.f, playBounds.height / 2.f);
-    m_playText.setPosition(centerX, centerY);
+    m_playText.setPosition(centerX, centerY - 80.f);
+
+    sf::FloatRect labelBounds = m_difficultyLabel.getLocalBounds();
+    m_difficultyLabel.setOrigin(labelBounds.width / 2.f, labelBounds.height / 2.f);
+    m_difficultyLabel.setPosition(centerX, centerY + 20.f);
+
+    sf::FloatRect easyBounds = m_easyText.getLocalBounds();
+    m_easyText.setOrigin(easyBounds.width / 2.f, easyBounds.height / 2.f);
+    m_easyText.setPosition(centerX - 180.f, centerY + 90.f);
+
+    sf::FloatRect medBounds = m_mediumText.getLocalBounds();
+    m_mediumText.setOrigin(medBounds.width / 2.f, medBounds.height / 2.f);
+    m_mediumText.setPosition(centerX, centerY + 90.f);
+
+    sf::FloatRect hardBounds = m_hardText.getLocalBounds();
+    m_hardText.setOrigin(hardBounds.width / 2.f, hardBounds.height / 2.f);
+    m_hardText.setPosition(centerX + 180.f, centerY + 90.f);
     
     sf::FloatRect exitBounds = m_exitText.getLocalBounds();
     m_exitText.setOrigin(exitBounds.width / 2.f, exitBounds.height / 2.f);
-    m_exitText.setPosition(centerX, centerY + 120.f);
+    m_exitText.setPosition(centerX, centerY + 200.f);
     
     m_result = MenuResult::Nothing;
     
@@ -108,6 +144,21 @@ void MainMenu::handleInput(sf::RenderWindow& window)
                 {
                     m_result = MenuResult::Exit;
                 }
+
+                if (m_easyText.getGlobalBounds().contains(mousePosF))
+                {
+                    m_selectedDifficulty = DifficultySettings::Level::Easy;
+                }
+
+                if (m_mediumText.getGlobalBounds().contains(mousePosF))
+                {
+                    m_selectedDifficulty = DifficultySettings::Level::Medium;
+                }
+
+                if (m_hardText.getGlobalBounds().contains(mousePosF))
+                {
+                    m_selectedDifficulty = DifficultySettings::Level::Hard;
+                }
             }
         }
     }
@@ -119,27 +170,33 @@ void MainMenu::update(sf::RenderWindow& window)
     sf::Vector2i mousePos = sf::Mouse::getPosition(window);
     sf::Vector2f mousePosF(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
     
-    if (m_playText.getGlobalBounds().contains(mousePosF))
-    {
-        m_playHovered = true;
-        m_playText.setFillColor(sf::Color(100, 100, 100));
-    }
+    m_playHovered = m_playText.getGlobalBounds().contains(mousePosF);
+    m_playText.setFillColor(m_playHovered ? sf::Color(100, 100, 100) : sf::Color(200, 200, 200));
+
+    m_exitHovered = m_exitText.getGlobalBounds().contains(mousePosF);
+    m_exitText.setFillColor(m_exitHovered ? sf::Color(100, 100, 100) : sf::Color(200, 200, 200));
+
+    bool easySelected = (m_selectedDifficulty == DifficultySettings::Level::Easy);
+    bool medSelected = (m_selectedDifficulty == DifficultySettings::Level::Medium);
+    bool hardSelected = (m_selectedDifficulty == DifficultySettings::Level::Hard);
+
+    m_easyHovered = m_easyText.getGlobalBounds().contains(mousePosF);
+    if (easySelected)
+        m_easyText.setFillColor(sf::Color(50, 200, 50));
     else
-    {
-        m_playHovered = false;
-        m_playText.setFillColor(sf::Color(200, 200, 200));
-    }
-    
-    if (m_exitText.getGlobalBounds().contains(mousePosF))
-    {
-        m_exitHovered = true;
-        m_exitText.setFillColor(sf::Color(100, 100, 100));
-    }
+        m_easyText.setFillColor(m_easyHovered ? sf::Color(100, 100, 100) : sf::Color(200, 200, 200));
+
+    m_mediumHovered = m_mediumText.getGlobalBounds().contains(mousePosF);
+    if (medSelected)
+        m_mediumText.setFillColor(sf::Color(200, 200, 50));
     else
-    {
-        m_exitHovered = false;
-        m_exitText.setFillColor(sf::Color(200, 200, 200));
-    }
+        m_mediumText.setFillColor(m_mediumHovered ? sf::Color(100, 100, 100) : sf::Color(200, 200, 200));
+
+    m_hardHovered = m_hardText.getGlobalBounds().contains(mousePosF);
+    if (hardSelected)
+        m_hardText.setFillColor(sf::Color(200, 50, 50));
+    else
+        m_hardText.setFillColor(m_hardHovered ? sf::Color(100, 100, 100) : sf::Color(200, 200, 200));
 }
 
 void MainMenu::render(sf::RenderWindow& window)
@@ -150,6 +207,10 @@ void MainMenu::render(sf::RenderWindow& window)
     window.draw(m_titleText);
     
     window.draw(m_playText);
+    window.draw(m_difficultyLabel);
+    window.draw(m_easyText);
+    window.draw(m_mediumText);
+    window.draw(m_hardText);
     window.draw(m_exitText);
     
     window.display();

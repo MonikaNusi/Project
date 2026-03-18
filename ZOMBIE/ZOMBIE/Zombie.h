@@ -75,6 +75,8 @@ public:
     void setHasKey(bool v);
     bool hasKey() const;
 
+    void applyDifficulty(int health, int damage);
+
 private:
     void setState(State newState);
     float distanceTo(sf::Vector2f p) const;
@@ -109,6 +111,7 @@ private:
 
     int m_maxHealth{ 100 };
     int m_health{ 100 };
+    int m_damage{ 10 };
 
     sf::Vector2i m_lastPlayerTile{ -1, -1 };
     float m_pathTimer = 0.f;

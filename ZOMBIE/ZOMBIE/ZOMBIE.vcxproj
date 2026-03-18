@@ -36,6 +36,7 @@
   <ItemGroup>
     <ClInclude Include="BossZombie.h" />
     <ClInclude Include="Bullet.h" />
+    <ClInclude Include="dificultySetting.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Gun.h" />
     <ClInclude Include="MainMenu.h" />

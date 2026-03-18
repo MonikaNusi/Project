@@ -2,11 +2,13 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 #include "Gun.h" 
+#include "dificultySetting.h"
 
 class Player
 {
 public:
 	Player();
+	void applyDifficulty(const DifficultySettings& settings);
 	void hadnleInput();
 	void update(sf::Time dt);
 	void render(sf::RenderWindow& window);

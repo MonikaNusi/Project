@@ -22,6 +22,7 @@
 
 #include "Game.h"
 #include "MainMenu.h"
+#include "dificultySetting.h"
 
 int main()
 {
@@ -39,7 +40,15 @@ int main()
 		
 		if (result == MainMenu::MenuResult::Play)
 		{
-			Game game(window);
+			DifficultySettings settings;
+			switch (menu.getSelectedDifficulty())
+			{
+			case DifficultySettings::Level::Easy:   settings = DifficultySettings::Easy();   break;
+			case DifficultySettings::Level::Medium:  settings = DifficultySettings::Medium();  break;
+			case DifficultySettings::Level::Hard:    settings = DifficultySettings::Hard();    break;
+			}
+
+			Game game(window, settings);
 			game.run();
 		}
 	}

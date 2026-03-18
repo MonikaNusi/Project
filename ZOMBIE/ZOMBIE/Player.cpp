@@ -236,4 +236,13 @@ void Player::playPickupSound()
 	m_pickupSound.play();
 }
 
+void Player::applyDifficulty(const DifficultySettings& settings)
+{
+	m_health = settings.playerHealth;
+	m_maxHealth = settings.playerHealth;
+	m_ammo = settings.playerAmmo;
+	m_maxAmmo = settings.playerAmmo;
+	m_fireRate = settings.playerFireRate;
+}
+
 

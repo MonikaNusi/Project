@@ -51,6 +51,8 @@ public:
 
 	int tryDealDamage(const sf::FloatRect& playerHitbox);
 
+	void applyDifficulty(int health);
+
 private:
 	void setState(State newState);
 	float distanceTo(sf::Vector2f p) const;

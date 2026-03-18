@@ -38,6 +38,8 @@ public:
 
     int tryDealDamage(const sf::FloatRect& playerHitbox);
 
+    void applyDifficulty(int health, int damage);
+
 private:
     void setState(State newState);
     float distanceTo(sf::Vector2f p) const;
@@ -57,6 +59,7 @@ private:
 
     int m_maxHealth{ 50 };
     int m_health{ 50 };
+    int m_damage{ 15 };
 
     float m_attackTimer{ 0.f };
     float m_attackDuration{ 0.4f };
