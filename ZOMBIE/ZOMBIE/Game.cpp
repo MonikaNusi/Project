@@ -9,7 +9,8 @@
 #include <cmath>
 #include <cstdlib>
 
-static void drawLightOverlay(sf::RenderWindow &window, const sf::Vector2f &playerCenter, int windowW, int windowH)
+static void drawLightOverlay(sf::RenderWindow &window, const sf::Vector2f &playerCenter, 
+    const std::vector<sf::Vector2f>& torchPositions, int windowW, int windowH)
 {
     static sf::Texture lightTex;
     static bool generated = false;
@@ -31,7 +32,6 @@ static void drawLightOverlay(sf::RenderWindow &window, const sf::Vector2f &playe
                 float d = std::sqrt(dx * dx + dy * dy);
 
                 float t = std::max(0.f, 1.0f - d);
-      
                 float brightness = t * t;
 
                 sf::Uint8 v = static_cast<sf::Uint8>(255.f * brightness);
@@ -55,28 +55,40 @@ static void drawLightOverlay(sf::RenderWindow &window, const sf::Vector2f &playe
         cachedH = windowH;
     }
 
-   
     const sf::Uint8 ambient = 80;
     lightMap.clear(sf::Color(ambient, ambient, ambient, 255));
 
-    // Match the world view so the light follows the player in world space
     lightMap.setView(window.getView());
 
-    // Draw the radial light at the player position
-    sf::Sprite light(lightTex);
-    light.setOrigin(static_cast<float>(texRadius), static_cast<float>(texRadius));
-    light.setPosition(playerCenter);
+    // Player light (large, warm orange)
+    {
+        sf::Sprite light(lightTex);
+        light.setOrigin(static_cast<float>(texRadius), static_cast<float>(texRadius));
+        light.setPosition(playerCenter);
 
-    // how many world-pixels the light should reach
-    const float desiredRadius = 280.f;
-    float scale = desiredRadius / static_cast<float>(texRadius);
-    light.setScale(scale, scale);
+        const float desiredRadius = 280.f;
+        float scale = desiredRadius / static_cast<float>(texRadius);
+        light.setScale(scale, scale);
+        light.setColor(sf::Color(255, 120, 20, 255));
 
-    // Slight warm tint
-    light.setColor(sf::Color(255, 120, 20, 255));
+        lightMap.draw(light, sf::BlendAdd);
+    }
 
-    // Additive blend so the light brightens beyond the ambient level
-    lightMap.draw(light, sf::BlendAdd);
+    // Torch lights (smaller orange glow)
+    for (const auto& torchPos : torchPositions)
+    {
+        sf::Sprite light(lightTex);
+        light.setOrigin(static_cast<float>(texRadius), static_cast<float>(texRadius));
+        light.setPosition(torchPos);
+
+        const float torchRadius = 140.f;
+        float scale = torchRadius / static_cast<float>(texRadius);
+        light.setScale(scale, scale);
+        light.setColor(sf::Color(200, 100, 15, 255));
+
+        lightMap.draw(light, sf::BlendAdd);
+    }
+
     lightMap.display();
 
     sf::Sprite overlay(lightMap.getTexture());
@@ -213,6 +225,12 @@ Game::Game(sf::RenderWindow& window) :
 	}
 
 	Bullet::loadTexture();
+
+	if (!m_torchTexture.loadFromFile("ASSETS/IMAGES/torch.png"))
+	{
+		std::cout << "Failed to load torch texture\n";
+	}
+	m_torchTexture.setSmooth(false);
 }
 
 Game::~Game()
@@ -474,6 +492,11 @@ void Game::update(sf::Time t_deltaTime)
 	for (auto& b : m_bullets) 
 	{
 		b.update(t_deltaTime);
+
+		if (b.isAlive() && isCollidingWithWall(b.getBounds()))
+		{
+			b.kill();
+		}
 	}
 
 	m_bullets.erase(std::remove_if(m_bullets.begin(), m_bullets.end(),
@@ -579,6 +602,21 @@ void Game::update(sf::Time t_deltaTime)
 					std::cout << "Opened chest! Item dropped at (" << itemSpawnPos.x << ", " << itemSpawnPos.y << ")\n";
 				}
 			}
+		}
+	}
+
+	// Animate torches
+	for (auto& torch : m_torches)
+	{
+		torch.frameTimer += t_deltaTime.asSeconds();
+		if (torch.frameTimer >= m_torchFrameTime)
+		{
+			torch.frameTimer = 0.f;
+			torch.currentFrame = (torch.currentFrame + 1) % m_torchFrameCount;
+			torch.sprite.setTextureRect(sf::IntRect(
+				static_cast<int>(torch.currentFrame * m_torchFrameWidth), 0,
+				static_cast<int>(m_torchFrameWidth),
+				static_cast<int>(m_torchFrameHeight)));
 		}
 	}
 
@@ -1242,6 +1280,8 @@ void Game::saveCurrentRoomState()
 	
 	// Save current keys
 	m_roomKeys[roomKey] = m_keys;
+
+	m_roomTorches[roomKey] = m_torches;
 	
 	std::cout << "Saved room (" << m_currentRoom.x << "," << m_currentRoom.y 
 		<< ") with " << m_zombies.size() << " zombies and " << m_minions.size() << " minions\n";
@@ -1319,6 +1359,15 @@ void Game::loadRoomState()
 	else
 	{
 		m_keys.clear();
+	}
+
+	if (m_roomTorches.find(roomKey) != m_roomTorches.end())
+	{
+		m_torches = m_roomTorches[roomKey];
+	}
+	else
+	{
+		spawnTorchesForRoom();
 	}
 }
 
@@ -1915,13 +1964,23 @@ void Game::render()
 		b.render(m_window);
 	}
 
-
+	for (const auto& torch : m_torches)
+	{
+		m_window.draw(torch.sprite);
+	}
 
 	sf::Vector2f playerPos = m_player.getPosition();
 	sf::Vector2f playerSize = m_player.getSize();
 	sf::Vector2f playerCenter = playerPos + playerSize / 2.f;
 
-	drawLightOverlay(m_window, playerCenter, windowW, windowH);
+	// Collect torch positions for light overlay
+	std::vector<sf::Vector2f> torchPositions;
+	for (const auto& torch : m_torches)
+	{
+		torchPositions.push_back(torch.pos);
+	}
+
+	drawLightOverlay(m_window, playerCenter, torchPositions, windowW, windowH);
 
 	m_window.setView(m_cameraView);
 
@@ -2082,6 +2141,74 @@ void Game::renderPickupPrompts()
         }
     }
 }
+
+void Game::spawnTorchesForRoom()
+{
+	auto roomKey = std::make_pair(m_currentRoom.x, m_currentRoom.y);
+
+	if (m_roomTorches.find(roomKey) != m_roomTorches.end())
+	{
+		return;
+	}
+
+	m_torches.clear();
+
+	const auto& room = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
+	const int windowW = m_window.getSize().x;
+	const int windowH = m_window.getSize().y;
+
+	float tileW = (float)windowW / room.width;
+	float tileH = (float)windowH / room.height;
+
+	std::vector<sf::Vector2f> candidates;
+
+	for (int y = 0; y < room.height - 1; ++y)
+	{
+		for (int x = 1; x < room.width - 1; ++x)
+		{
+			if (room.tiles[y][x] != 1) continue;
+
+			bool floorBelow = (y + 1 < room.height && room.tiles[y + 1][x] == 0);
+
+			if (floorBelow)
+			{
+				sf::Vector2f torchPos(
+					x * tileW + tileW * 0.5f,
+					y * tileH + tileH * 0.5f
+				);
+				candidates.push_back(torchPos);
+			}
+		}
+	}
+
+	int torchCount = std::min(static_cast<int>(candidates.size()), 4 + (std::rand() % 3));
+
+	for (int i = static_cast<int>(candidates.size()) - 1; i > 0; --i)
+	{
+		int j = std::rand() % (i + 1);
+		std::swap(candidates[i], candidates[j]);
+	}
+
+	for (int i = 0; i < torchCount && i < static_cast<int>(candidates.size()); ++i)
+	{
+		Torch torch(candidates[i]);
+		torch.sprite.setTexture(m_torchTexture);
+		torch.sprite.setTextureRect(sf::IntRect(0, 0,
+			static_cast<int>(m_torchFrameWidth),
+			static_cast<int>(m_torchFrameHeight)));
+		torch.sprite.setOrigin(m_torchFrameWidth / 2.f, m_torchFrameHeight / 2.f);
+		torch.sprite.setPosition(candidates[i]);
+		torch.sprite.setScale(2.f, 2.f);
+
+		torch.currentFrame = std::rand() % m_torchFrameCount;
+		torch.frameTimer = static_cast<float>(std::rand() % 100) / 100.f * m_torchFrameTime;
+
+		m_torches.push_back(torch);
+	}
+
+	m_roomTorches[roomKey] = m_torches;
+}
+
 
 std::string zombieStateToString(Zombie::State state)
 {

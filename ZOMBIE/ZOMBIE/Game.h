@@ -69,6 +69,7 @@ private:
 	void spawnPickupsForRoom();
 	void renderPickupPrompts();
 	void spawnDecorationsForRoom();
+	void spawnTorchesForRoom();
 	void updateBossMusic();
 	sf::Vector2f findUniqueSpawn(const MapGenerator::Room& room,
 		const std::vector<sf::Vector2f>& usedPositions,
@@ -130,6 +131,25 @@ private:
 		Decoration(sf::Vector2f p) : pos(p) {}
 	};
 
+	// Wall torches
+	struct Torch
+	{
+		sf::Vector2f pos;
+		sf::Sprite sprite;
+		int currentFrame{ 0 };
+		float frameTimer{ 0.f };
+
+		Torch() = default;
+		Torch(sf::Vector2f p) : pos(p) {}
+	};
+
+	std::vector<Torch> m_torches;
+	sf::Texture m_torchTexture;
+	const int m_torchFrameCount{ 3 };
+	const float m_torchFrameWidth{ 32.f };
+	const float m_torchFrameHeight{ 32.f };
+	const float m_torchFrameTime{ 0.15f };
+	std::map<std::pair<int, int>, std::vector<Torch>> m_roomTorches;
 
 	std::vector<Key> m_keys;
 	bool m_playerHasKey{ false };
