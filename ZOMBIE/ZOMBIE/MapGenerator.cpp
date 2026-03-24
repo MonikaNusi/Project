@@ -4,11 +4,14 @@
 #include <queue>
 #include <iostream>
 
+//sets up the grid dimensions and loads textures
 MapGenerator::MapGenerator(int roomsX, int roomsY, int roomSize)
     : m_roomsX(roomsX), m_roomsY(roomsY), m_roomSize(roomSize)
 {
     std::srand(static_cast<unsigned>(std::time(nullptr)));
+    // Create the 2D grid of rooms 
     m_rooms.resize(m_roomsY, std::vector<Room>(m_roomsX));
+    // Shape used for debug rendering of rooms on the minimap
     m_roomShape.setSize(sf::Vector2f((float)m_roomSize, (float)m_roomSize));
 
     if (!m_tilesetTexture.loadFromFile("ASSETS/IMAGES/tileset.png"))
@@ -26,6 +29,7 @@ MapGenerator::MapGenerator(int roomsX, int roomsY, int roomSize)
     m_floorTexture.setRepeated(true);
 }
 
+// Returns a const reference to the room at grid position
 const MapGenerator::Room& MapGenerator::getRoom(int x, int y) const
 {
     return m_rooms[y][x];

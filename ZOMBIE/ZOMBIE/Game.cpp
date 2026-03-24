@@ -11,7 +11,7 @@
 
 static void drawLightOverlay(sf::RenderWindow &window, const sf::Vector2f &playerCenter, 
     const std::vector<sf::Vector2f>& torchPositions, int windowW, int windowH,
-    int ambient, float playerRadius, float torchRadius)
+    int ambient, float playerRadius, float torchRadius, bool hardMode = false)
 {
     static sf::Texture lightTex;
     static bool generated = false;
@@ -57,7 +57,17 @@ static void drawLightOverlay(sf::RenderWindow &window, const sf::Vector2f &playe
     }
 
     const sf::Uint8 amb = static_cast<sf::Uint8>(ambient);
-    lightMap.clear(sf::Color(amb, amb, amb, 255));
+    if (hardMode)
+    {
+        // Subtle red-tinted ambient for hard difficulty
+        sf::Uint8 r = static_cast<sf::Uint8>(std::min(255, ambient + 20));
+        sf::Uint8 gb = static_cast<sf::Uint8>(std::max(0, ambient - 10));
+        lightMap.clear(sf::Color(r, gb, gb, 255));
+    }
+    else
+    {
+        lightMap.clear(sf::Color(amb, amb, amb, 255));
+    }
 
     lightMap.setView(window.getView());
 
@@ -68,22 +78,29 @@ static void drawLightOverlay(sf::RenderWindow &window, const sf::Vector2f &playe
 
         float scale = playerRadius / static_cast<float>(texRadius);
         light.setScale(scale, scale);
-        light.setColor(sf::Color(255, 120, 20, 255));
+
+        if (hardMode)
+            light.setColor(sf::Color(255, 80, 20, 255));
+        else
+            light.setColor(sf::Color(255, 120, 20, 255));
 
         lightMap.draw(light, sf::BlendAdd);
     }
 
-    // Torch lights (smaller orange glow)
+    // Torch lights
     for (const auto& torchPos : torchPositions)
     {
         sf::Sprite light(lightTex);
         light.setOrigin(static_cast<float>(texRadius), static_cast<float>(texRadius));
         light.setPosition(torchPos);
 
-        //const float torchRadius = 140.f;
         float scale = torchRadius / static_cast<float>(texRadius);
         light.setScale(scale, scale);
-        light.setColor(sf::Color(200, 100, 15, 255));
+
+        if (hardMode)
+            light.setColor(sf::Color(220, 50, 10, 255));
+        else
+            light.setColor(sf::Color(200, 100, 15, 255));
 
         lightMap.draw(light, sf::BlendAdd);
     }
@@ -1160,6 +1177,7 @@ foundDoor:
 	if (m_player.getHealth() <= 0)
 	{
 		std::cout << "GAME OVER - Player Health: " << m_player.getHealth() << "\n";
+		showGameOver();
 		m_exitGame = true;
 	}
 }
@@ -1189,14 +1207,36 @@ void Game::spawnZombiesForRoom()
 	case MapGenerator::Room::RoomType::Normal:
 		zombieCount = m_difficulty.zombieCountNormal;
 		minionCount = m_difficulty.minionCountNormal + (std::rand() % 2);
+		if (!m_bossDefeated)
+		{
+			sf::Vector2f bossSpawn = findSafeSpawn(room);
+			m_bossZombie = std::make_unique<BossZombie>(bossSpawn);
+			m_bossZombie->applyDifficulty(m_difficulty.bossHealth);
+			std::cout << "Boss zombie spawned!\n";
+		}
+
 		break;
 	case MapGenerator::Room::RoomType::Trap:
 		zombieCount = m_difficulty.zombieCountTrap;
 		minionCount = m_difficulty.minionCountTrap + (std::rand() % 3);
+		if (!m_bossDefeated)
+		{
+			sf::Vector2f bossSpawn = findSafeSpawn(room);
+			m_bossZombie = std::make_unique<BossZombie>(bossSpawn);
+			m_bossZombie->applyDifficulty(m_difficulty.bossHealth);
+			std::cout << "Boss zombie spawned!\n";
+		}
 		break;
 	case MapGenerator::Room::RoomType::Treasure:
 		zombieCount = m_difficulty.zombieCountTreasure;
 		minionCount = m_difficulty.minionCountTreasure + (std::rand() % 2);
+		if (!m_bossDefeated)
+		{
+			sf::Vector2f bossSpawn = findSafeSpawn(room);
+			m_bossZombie = std::make_unique<BossZombie>(bossSpawn);
+			m_bossZombie->applyDifficulty(m_difficulty.bossHealth);
+			std::cout << "Boss zombie spawned!\n";
+		}
 		break;
 	case MapGenerator::Room::RoomType::Boss:
 		zombieCount = 0;
@@ -1986,7 +2026,7 @@ void Game::render()
 		torchPositions.push_back(torch.pos);
 	}
 
-	drawLightOverlay(m_window, playerCenter, torchPositions, windowW, windowH, m_difficulty.ambientLight, m_difficulty.playerLightRadius, m_difficulty.torchLightRadius);
+	drawLightOverlay(m_window, playerCenter, torchPositions, windowW, windowH, m_difficulty.ambientLight, m_difficulty.playerLightRadius, m_difficulty.torchLightRadius, m_difficulty.level == DifficultySettings::Level::Hard);
 
 	m_window.setView(m_cameraView);
 
@@ -2023,8 +2063,6 @@ void Game::render()
 		t.setFillColor(sf::Color::White);
 		m_window.draw(t);
 	}
-
-	
 
 
 	// draw unlock hint if near door and has key
@@ -2275,4 +2313,65 @@ sf::Vector2f Game::findUniqueSpawn(const MapGenerator::Room& room,
 	}
 
 	return findSafeSpawn(room);
+}
+
+void Game::showGameOver()
+{
+	if (m_bossMusixPlaying)
+	{
+		m_bossMusic.stop();
+		m_bossMusixPlaying = false;
+	}
+
+	sf::Text gameOverText;
+	gameOverText.setFont(m_uiFont);
+	gameOverText.setString("GAME OVER");
+	gameOverText.setCharacterSize(80);
+	gameOverText.setFillColor(sf::Color(200, 0, 0));
+	sf::FloatRect goBounds = gameOverText.getLocalBounds();
+	gameOverText.setOrigin(goBounds.width / 2.f, goBounds.height / 2.f);
+	gameOverText.setPosition(m_window.getSize().x / 2.f, m_window.getSize().y / 2.f - 60.f);
+
+	sf::Text promptText;
+	promptText.setFont(m_uiFont);
+	promptText.setString("Press ENTER to return to menu");
+	promptText.setCharacterSize(28);
+	promptText.setFillColor(sf::Color(180, 180, 180));
+	sf::FloatRect pBounds = promptText.getLocalBounds();
+	promptText.setOrigin(pBounds.width / 2.f, pBounds.height / 2.f);
+	promptText.setPosition(m_window.getSize().x / 2.f, m_window.getSize().y / 2.f + 60.f);
+
+	// Semi-transparent dark overlay
+	sf::RectangleShape overlay;
+	overlay.setSize(sf::Vector2f(
+		static_cast<float>(m_window.getSize().x),
+		static_cast<float>(m_window.getSize().y)));
+	overlay.setFillColor(sf::Color(0, 0, 0, 180));
+
+	while (m_window.isOpen())
+	{
+		sf::Event event;
+		while (m_window.pollEvent(event))
+		{
+			if (event.type == sf::Event::Closed)
+			{
+				m_window.close();
+				return;
+			}
+			if (event.type == sf::Event::KeyPressed)
+			{
+				if (event.key.code == sf::Keyboard::Return ||
+					event.key.code == sf::Keyboard::Escape)
+				{
+					return;
+				}
+			}
+		}
+
+		m_window.setView(m_window.getDefaultView());
+		m_window.draw(overlay);
+		m_window.draw(gameOverText);
+		m_window.draw(promptText);
+		m_window.display();
+	}
 }

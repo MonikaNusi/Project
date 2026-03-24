@@ -77,6 +77,7 @@ private:
 	sf::Vector2f findUniqueSpawn(const MapGenerator::Room& room,
 		const std::vector<sf::Vector2f>& usedPositions,
 		float minDistance);
+	void showGameOver();
 
 	Player m_player;
 	MapGenerator m_mapGenerator;
@@ -167,7 +168,7 @@ private:
 
 	// unlocking progress
 	float m_unlockHoldTimer{ 0.f };
-	const float m_unlockHoldRequired{ 5.f };
+	const float m_unlockHoldRequired{ 2.f };
 	bool m_isUnlocking{ false };
 	sf::Vector2i m_unlockTargetRoom{ -1, -1 };
 	int m_unlockTargetDirX{ 0 };

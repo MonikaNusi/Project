@@ -456,21 +456,25 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
         updateFacing(m_velocity);
     }
 
-    //Separation steering
+    //Separation steering / vector to store the total repulsion force and count nearby zombies
     sf::Vector2f separation{ 0.f, 0.f };
     int neighbourCount = 0;
 
+    //Each zombie checks every other zombie, ignoring itself
     for (const Zombie* other : zombies)
     {
         if (other == this) continue;
 
+        //calculate the direction and distance between zombie
         sf::Vector2f diff = getPosition() - other->getPosition();
         float distSq = diff.x * diff.x + diff.y * diff.y;
 
         float radiusSq = m_separationRadius * m_separationRadius;
         
+        //Only zombies within a certain radius affect each other
         if (distSq > 0.01f && distSq < radiusSq)
         {
+           // normalized vector pointing away from nearby zombies.
             separation += diff / std::sqrt(distSq);
             neighbourCount++;
         }
@@ -479,7 +483,7 @@ void Zombie::update(sf::Time dt, sf::Vector2f playerPos, const std::vector<std::
     if (neighbourCount > 0)
     {
         separation /= static_cast<float>(neighbourCount);
-        m_velocity += separation * m_separationStrength;
+        m_velocity += separation * m_separationStrength; //seperation forces pushing the zombies apart
     }
 
 

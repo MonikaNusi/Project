@@ -5,12 +5,14 @@
 #include <algorithm>
 #include <cmath>
 
+// Stores a tile position and its priority score,lower = more promising
 struct PQNode
 {
-    sf::Vector2i pos;
-    float priority;
+    sf::Vector2i pos;  // tile grid coordinate (x, y)
+    float priority;  // f = g + h (total estimated cost)
 };
 
+// Comparator so the priority queue returns the LOWEST priority first
 struct CompareNode
 {
     bool operator()(const PQNode& a, const PQNode& b) const
@@ -19,8 +21,10 @@ struct CompareNode
     }
 };
 
+//how far is the goal
 static float heuristic(sf::Vector2i a, sf::Vector2i b)
 {
+    // Add the horizontal distance and vertical distance between two tiles
     return std::abs(a.x - b.x) + std::abs(a.y - b.y);
 }
 
@@ -38,13 +42,14 @@ std::vector<sf::Vector2i> findPath(
     {
         return p.y * width + p.x;
     };
-
+    //always processes the lowest cost tile first
     std::priority_queue<PQNode, std::vector<PQNode>, CompareNode> open;
     std::unordered_map<int, sf::Vector2i> cameFrom;
     std::unordered_map<int, float> costSoFar;
 
+    //start the zombie pos with 0 cost
     open.push({ start, 0.f });
-    costSoFar[key(start)] = 0.f;
+    costSoFar[key(start)] = 0.f; 
 
     const sf::Vector2i directions[4] =
     {
@@ -72,6 +77,7 @@ std::vector<sf::Vector2i> findPath(
             if (tiles[next.y][next.x] == 1)
                 continue;
 
+            //calcultes the cost so far plus the estimated distance goal
             float newCost = costSoFar[key(current)] + 1.f;
             int nextKey = key(next);
 
@@ -90,6 +96,7 @@ std::vector<sf::Vector2i> findPath(
         return path; // no path found
 
     sf::Vector2i current = goal;
+    //trace backwards to build the final path
     while (current != start)
     {
         path.push_back(current);

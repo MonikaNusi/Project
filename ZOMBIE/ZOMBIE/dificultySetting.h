@@ -93,7 +93,7 @@ struct DifficultySettings
 		s.playerHealth = 75;
 		s.playerAmmo = 50;
 		s.playerFireRate = 0.25f;
-		s.ambientLight = 40;
+		s.ambientLight = 50;
 		s.playerLightRadius = 200.f;
 		s.torchLightRadius = 100.f;
 		s.zombieCountNormal = 10;
