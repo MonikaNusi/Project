@@ -3,12 +3,21 @@
 #include <SFML/Audio.hpp>
 #include "Gun.h" 
 #include "dificultySetting.h"
+#include <vector>
 
 class Player
 {
 public:
 	Player();
 	void applyDifficulty(const DifficultySettings& settings);
+
+	struct InventoryItem
+	{
+		enum class Type { Health, Ammo };
+		Type type;
+		int value;
+	};
+
 	void hadnleInput();
 	void update(sf::Time dt);
 	void render(sf::RenderWindow& window);
@@ -38,6 +47,19 @@ public:
 	const Gun& getGun() const { return m_gun; }
 	
 	void setGunDirectionForShooting(Gun::Direction dir);
+
+	void addToInventory(InventoryItem::Type type, int value);
+	bool useHealthPickup();
+	bool useAmmoPickup();
+
+	// Inventory accessors
+	int getHealthPickupCount() const;
+	int getAmmoPickupCount() const;
+
+	const std::vector<InventoryItem>& getInventory() const { return m_inventory; }
+
+	bool useInventorySlot(int slot);
+	
 
 private:
 	sf::Sprite m_sprite;
@@ -82,5 +104,7 @@ private:
 	Gun m_gun;
 	Gun::Direction m_overrideGunDirection;
 	bool m_useOverrideDirection{ false };
+
+	std::vector<InventoryItem> m_inventory;
 };
 

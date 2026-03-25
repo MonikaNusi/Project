@@ -245,4 +245,64 @@ void Player::applyDifficulty(const DifficultySettings& settings)
 	m_fireRate = settings.playerFireRate;
 }
 
+void Player::addToInventory(InventoryItem::Type type, int value)
+{
+	m_inventory.push_back({ type, value });
+}
+
+bool Player::useHealthPickup()
+{
+	for (auto it = m_inventory.begin(); it != m_inventory.end(); ++it)
+	{
+		if (it->type == InventoryItem::Type::Health)
+		{
+			heal(it->value);
+			m_inventory.erase(it);
+			playPickupSound();
+			return true;
+		}
+	}
+	return false;
+}
+
+bool Player::useAmmoPickup()
+{
+	for (auto it = m_inventory.begin(); it != m_inventory.end(); ++it)
+	{
+		if (it->type == InventoryItem::Type::Ammo)
+		{
+			addAmmo(it->value);
+			m_inventory.erase(it);
+			playPickupSound();
+			return true;
+		}
+	}
+	return false;
+}
+
+int Player::getHealthPickupCount() const
+{
+	return std::count_if(m_inventory.begin(), m_inventory.end(),
+		[](const InventoryItem& item) { return item.type == InventoryItem::Type::Health; });
+}
+
+int Player::getAmmoPickupCount() const
+{
+	return std::count_if(m_inventory.begin(), m_inventory.end(),
+		[](const InventoryItem& item) { return item.type == InventoryItem::Type::Ammo; });
+}
+
+bool Player::useInventorySlot(int slot)
+{
+	if (slot < 0 || slot >= static_cast<int>(m_inventory.size()))
+		return false;
+	auto item = m_inventory[slot];
+	if (item.type == InventoryItem::Type::Health)
+		heal(item.value);
+	else if (item.type == InventoryItem::Type::Ammo)
+		addAmmo(item.value);
+	playPickupSound();
+	m_inventory.erase(m_inventory.begin() + slot);
+	return true;
+}
 

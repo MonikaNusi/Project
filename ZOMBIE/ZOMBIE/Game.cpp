@@ -345,6 +345,28 @@ void Game::processKeys(sf::Event t_event)
 	{
 		m_showAIDebug = !m_showAIDebug;
 	}
+	if (t_event.type == sf::Event::KeyPressed)
+	{
+		if (t_event.key.code >= sf::Keyboard::Num1 && t_event.key.code <= sf::Keyboard::Num5)
+		{
+			int slot = t_event.key.code - sf::Keyboard::Num1;
+			auto& inv = m_player.getInventory();
+			if (slot < static_cast<int>(inv.size()))
+			{
+				const auto& item = inv[slot];
+				if (item.type == Player::InventoryItem::Type::Health)
+				{
+					m_player.useInventorySlot(slot);
+					std::cout << "Used health pickup from inventory!\n";
+				}
+				else if (item.type == Player::InventoryItem::Type::Ammo)
+				{
+					m_player.useInventorySlot(slot);
+					std::cout << "Used ammo pickup from inventory!\n";
+				}
+			}
+		}
+	}
 }
 
 void Game::updateBossMusic()
@@ -660,12 +682,12 @@ void Game::update(sf::Time t_deltaTime)
 			
 			if (item.type == DroppedItem::Type::Health)
 			{
-				m_player.heal(item.value);
+				m_player.addToInventory(Player::InventoryItem::Type::Health, item.value);
 				std::cout << "Picked up health potion! +" << item.value << " HP\n";
 			}
 			else
 			{
-				m_player.addAmmo(item.value);
+				m_player.addToInventory(Player::InventoryItem::Type::Ammo, item.value);
 				std::cout << "Picked up ammo! +" << item.value << "\n";
 			}
 		}
@@ -1207,36 +1229,18 @@ void Game::spawnZombiesForRoom()
 	case MapGenerator::Room::RoomType::Normal:
 		zombieCount = m_difficulty.zombieCountNormal;
 		minionCount = m_difficulty.minionCountNormal + (std::rand() % 2);
-		if (!m_bossDefeated)
-		{
-			sf::Vector2f bossSpawn = findSafeSpawn(room);
-			m_bossZombie = std::make_unique<BossZombie>(bossSpawn);
-			m_bossZombie->applyDifficulty(m_difficulty.bossHealth);
-			std::cout << "Boss zombie spawned!\n";
-		}
+		
 
 		break;
 	case MapGenerator::Room::RoomType::Trap:
 		zombieCount = m_difficulty.zombieCountTrap;
 		minionCount = m_difficulty.minionCountTrap + (std::rand() % 3);
-		if (!m_bossDefeated)
-		{
-			sf::Vector2f bossSpawn = findSafeSpawn(room);
-			m_bossZombie = std::make_unique<BossZombie>(bossSpawn);
-			m_bossZombie->applyDifficulty(m_difficulty.bossHealth);
-			std::cout << "Boss zombie spawned!\n";
-		}
+
 		break;
 	case MapGenerator::Room::RoomType::Treasure:
 		zombieCount = m_difficulty.zombieCountTreasure;
 		minionCount = m_difficulty.minionCountTreasure + (std::rand() % 2);
-		if (!m_bossDefeated)
-		{
-			sf::Vector2f bossSpawn = findSafeSpawn(room);
-			m_bossZombie = std::make_unique<BossZombie>(bossSpawn);
-			m_bossZombie->applyDifficulty(m_difficulty.bossHealth);
-			std::cout << "Boss zombie spawned!\n";
-		}
+		
 		break;
 	case MapGenerator::Room::RoomType::Boss:
 		zombieCount = 0;
@@ -2085,6 +2089,54 @@ void Game::render()
 	}
 
 	drawMiniMap();
+
+	const auto& inventory = m_player.getInventory();
+	float iconSize = 40.f;
+	float iconSpacing = 10.f;
+	size_t slotCount = 5;
+	float totalWidth = slotCount * iconSize + (slotCount - 1) * iconSpacing;
+	float invStartX = 400.f;
+	float invY = 10.f;
+
+	for (size_t i = 0; i < slotCount; ++i)
+	{
+		sf::RectangleShape slotBg(sf::Vector2f(iconSize, iconSize));
+		slotBg.setPosition(invStartX + i * (iconSize + iconSpacing), invY);
+		slotBg.setFillColor(sf::Color(30, 30, 30, 200));
+		slotBg.setOutlineThickness(2.f);
+		slotBg.setOutlineColor(sf::Color::White);
+		m_window.draw(slotBg);
+
+		if (i < inventory.size())
+		{
+			const auto& item = inventory[i];
+			sf::Sprite icon;
+			if (item.type == Player::InventoryItem::Type::Health)
+			{
+				icon.setTexture(m_healthPotionTexture);
+			}
+			else
+			{
+				icon.setTexture(m_ammoCrateTexture);
+			}
+			icon.setOrigin(icon.getTexture()->getSize().x / 2.f, icon.getTexture()->getSize().y / 2.f);
+			icon.setPosition(slotBg.getPosition().x + iconSize / 2.f, slotBg.getPosition().y + iconSize / 2.f);
+			icon.setScale(iconSize / icon.getTexture()->getSize().x, iconSize / icon.getTexture()->getSize().y);
+			m_window.draw(icon);
+
+			// Draw value
+			sf::Text valueTxt(std::to_string(item.value), m_uiFont, 16);
+			valueTxt.setFillColor(sf::Color::White);
+			valueTxt.setPosition(slotBg.getPosition().x + 4.f, slotBg.getPosition().y + iconSize - 20.f);
+			m_window.draw(valueTxt);
+		}
+
+		// Draw slot number
+		sf::Text numTxt(std::to_string(i + 1), m_uiFont, 14);
+		numTxt.setFillColor(sf::Color(200, 200, 0));
+		numTxt.setPosition(slotBg.getPosition().x + iconSize - 16.f, slotBg.getPosition().y + 2.f);
+		m_window.draw(numTxt);
+	}
 
 	m_window.display();
 }

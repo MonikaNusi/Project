@@ -17,7 +17,14 @@ MainMenu::MainMenu()
         m_backgroundTexture.setSmooth(true);
         m_backgroundSprite.setTexture(m_backgroundTexture);
     }
-    
+
+    // Torch texture
+    if (!m_torchTexture.loadFromFile("ASSETS/IMAGES/torch.png"))
+    {
+        std::cout << "Failed to load torch texture for menu\n";
+    }
+    m_torchTexture.setSmooth(false);
+
     // Setup title text
     m_titleText.setFont(m_font);
     m_titleText.setString("ZOMBIE");
@@ -55,12 +62,38 @@ MainMenu::MainMenu()
     m_hardText.setFillColor(sf::Color(200, 200, 200));
 }
 
+void MainMenu::setupTorches(const sf::Vector2u& windowSize)
+{
+    m_torches.clear();
+    float centerX = windowSize.x / 2.f;
+    float centerY = windowSize.y / 2.f;
+
+    std::vector<sf::Vector2f> positions = {
+        {windowSize.x * 1.f / 3.6f, centerY - 250.f},  
+        {centerX,                  centerY - 250.f}, 
+        {windowSize.x * 5.f / 6.f, centerY - 250.f}    
+    };
+
+    for (auto& pos : positions)
+    {
+        Torch torch(pos);
+        torch.sprite.setTexture(m_torchTexture);
+        torch.sprite.setTextureRect(sf::IntRect(0, 0, static_cast<int>(m_torchFrameWidth), static_cast<int>(m_torchFrameHeight)));
+        torch.sprite.setOrigin(m_torchFrameWidth / 2.f, m_torchFrameHeight / 2.f);
+        torch.sprite.setPosition(pos);
+        torch.sprite.setScale(4.f, 4.f);
+        torch.currentFrame = rand() % m_torchFrameCount;
+        torch.frameTimer = static_cast<float>(rand() % 100) / 100.f * m_torchFrameTime;
+        m_torches.push_back(torch);
+    }
+}
+
 MainMenu::MenuResult MainMenu::show(sf::RenderWindow& window)
 {
     sf::Vector2u windowSize = window.getSize();
     float centerX = windowSize.x / 2.f;
     float centerY = windowSize.y / 2.f;
-    
+
     sf::Vector2u bgSize = m_backgroundTexture.getSize();
     if (bgSize.x > 0 && bgSize.y > 0)
     {
@@ -68,11 +101,13 @@ MainMenu::MenuResult MainMenu::show(sf::RenderWindow& window)
         float scaleY = static_cast<float>(windowSize.y) / bgSize.y;
         m_backgroundSprite.setScale(scaleX, scaleY);
     }
- 
+
+    setupTorches(windowSize);
+
     sf::FloatRect titleBounds = m_titleText.getLocalBounds();
     m_titleText.setOrigin(titleBounds.width / 2.f, titleBounds.height / 2.f);
     m_titleText.setPosition(centerX, centerY - 250.f);
-    
+
     sf::FloatRect playBounds = m_playText.getLocalBounds();
     m_playText.setOrigin(playBounds.width / 2.f, playBounds.height / 2.f);
     m_playText.setPosition(centerX, centerY - 80.f);
@@ -92,20 +127,38 @@ MainMenu::MenuResult MainMenu::show(sf::RenderWindow& window)
     sf::FloatRect hardBounds = m_hardText.getLocalBounds();
     m_hardText.setOrigin(hardBounds.width / 2.f, hardBounds.height / 2.f);
     m_hardText.setPosition(centerX + 180.f, centerY + 90.f);
-    
+
     sf::FloatRect exitBounds = m_exitText.getLocalBounds();
     m_exitText.setOrigin(exitBounds.width / 2.f, exitBounds.height / 2.f);
     m_exitText.setPosition(centerX, centerY + 200.f);
-    
+
     m_result = MenuResult::Nothing;
-    
+
+    sf::Clock clock;
     while (m_result == MenuResult::Nothing)
     {
         handleInput(window);
+
+        // Animate torches
+        float dt = clock.restart().asSeconds();
+        for (auto& torch : m_torches)
+        {
+            torch.frameTimer += dt;
+            if (torch.frameTimer >= m_torchFrameTime)
+            {
+                torch.frameTimer = 0.f;
+                torch.currentFrame = (torch.currentFrame + 1) % m_torchFrameCount;
+                torch.sprite.setTextureRect(sf::IntRect(
+                    static_cast<int>(torch.currentFrame * m_torchFrameWidth), 0,
+                    static_cast<int>(m_torchFrameWidth),
+                    static_cast<int>(m_torchFrameHeight)));
+            }
+        }
+
         update(window);
         render(window);
     }
-    
+
     return m_result;
 }
 
@@ -204,14 +257,41 @@ void MainMenu::render(sf::RenderWindow& window)
     window.clear(sf::Color(20, 20, 20));
     
     window.draw(m_backgroundSprite);
+
+    // Draw torches behind the title
+    for (const auto& torch : m_torches)
+    {
+        window.draw(torch.sprite);
+    }
+
+  
+    if (m_selectedDifficulty == DifficultySettings::Level::Hard)
+    {
+        sf::RectangleShape redTint(sf::Vector2f(window.getSize().x, window.getSize().y));
+        redTint.setFillColor(sf::Color(120, 10, 10, 110));
+        redTint.setPosition(0, 0);
+        window.draw(redTint);
+    }
+
+    float panelWidth = 700.f;
+    float panelHeight = 600.f;
+    float centerX = window.getSize().x / 2.f;
+    float centerY = window.getSize().y / 2.f + 30.f;
+    sf::RectangleShape panel(sf::Vector2f(panelWidth, panelHeight));
+    panel.setOrigin(panelWidth / 2.f, panelHeight / 2.f);
+    panel.setPosition(centerX, centerY);
+    panel.setFillColor(sf::Color(20, 20, 30, 200));
+    panel.setOutlineThickness(4.f);
+    panel.setOutlineColor(sf::Color(80, 80, 100, 180));
+    window.draw(panel);
+
     window.draw(m_titleText);
-    
     window.draw(m_playText);
     window.draw(m_difficultyLabel);
     window.draw(m_easyText);
     window.draw(m_mediumText);
     window.draw(m_hardText);
     window.draw(m_exitText);
-    
+
     window.display();
 }
