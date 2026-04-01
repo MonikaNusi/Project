@@ -83,6 +83,7 @@ private:
 	MapGenerator m_mapGenerator;
 	std::vector<std::vector<bool>> m_visitedRooms;
 	sf::Vector2i m_currentRoom{ 0, 0 };
+	sf::Vector2i m_startRoom{ 0, 0 };  // stores the starting room coordinates
 	sf::Vector2f m_lastPlayerPos;
 
 	sf::FloatRect m_debugPlayerBox;
@@ -216,4 +217,25 @@ private:
 	std::vector<Minion> m_minions;
 
 	std::map<std::pair<int, int>, std::vector<Minion>> m_roomMinions;
+
+	struct LetterDrop
+	{
+		sf::Vector2f pos;
+		bool picked{ false };
+		sf::Sprite sprite;
+		float bobTimer{ 0.f };
+		float baseY;
+		LetterDrop() = default;
+		LetterDrop(sf::Vector2f p) : pos(p), baseY(p.y) {}
+	};
+
+	std::vector<LetterDrop> m_letters;
+	sf::Texture m_letterTexture;
+	sf::Texture m_letterOpenTexture;
+	bool m_showLetterZoom{ false };
+	bool m_letterOpened{ false };
+	LetterDrop m_zoomedLetter;
+	bool m_ePressedLastFrame{ false };
+	bool m_letterDropped = false;
 };
+

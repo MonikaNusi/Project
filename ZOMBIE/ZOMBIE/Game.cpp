@@ -130,7 +130,10 @@ Game::Game(sf::RenderWindow& window, const DifficultySettings& difficulty) :
 	for (int y = 0; y < 6; ++y)
 		for (int x = 0; x < 8; ++x)
 			if (m_mapGenerator.getRoom(x, y).color == sf::Color::Green)
+			{
 				m_currentRoom = { x, y };
+				m_startRoom = { x, y };
+			}
 
 	const auto& newRoomObj = m_mapGenerator.getRoom(m_nextRoom.x, m_nextRoom.y);
 
@@ -250,6 +253,17 @@ Game::Game(sf::RenderWindow& window, const DifficultySettings& difficulty) :
 		std::cout << "Failed to load torch texture\n";
 	}
 	m_torchTexture.setSmooth(false);
+
+	if (!m_letterTexture.loadFromFile("ASSETS/IMAGES/letterclosed.png"))
+	{
+		std::cout << "Failed to load letter texture\n";
+	}
+	
+	if (!m_letterOpenTexture.loadFromFile("ASSETS/IMAGES/letteropened.png"))
+	{
+		std::cout << "Failed to load letter open texture\n";
+	}
+
 }
 
 Game::~Game()
@@ -297,7 +311,12 @@ void Game::processEvents()
 		if (newEvent.type == sf::Event::MouseButtonPressed &&
 			newEvent.mouseButton.button == sf::Mouse::Left)
 		{
-			if (m_player.canShoot())
+			if (m_showLetterZoom && !m_letterOpened)
+			{
+				m_letterOpened = true;
+				std::cout << "Letter opened!\n";
+			}
+			if (m_player.canShoot() && !m_showLetterZoom)
 			{
 				// Get mouse position
 				sf::Vector2i mousePixel = sf::Mouse::getPosition(m_window);
@@ -397,6 +416,20 @@ void Game::update(sf::Time t_deltaTime)
 		m_window.close();
 	}
 
+
+	bool ePressedNow = sf::Keyboard::isKeyPressed(sf::Keyboard::E);
+	bool eJustPressed = ePressedNow && !m_ePressedLastFrame;
+	m_ePressedLastFrame = ePressedNow;
+	
+	if (m_showLetterZoom)
+	{
+		if (eJustPressed)
+		{
+			m_showLetterZoom = false;
+		}
+		return; // freeze game while reading
+	}
+
 	updateBossMusic();
 
 	m_ammoText.setString("Ammo: " + std::to_string(m_player.getAmmo()));
@@ -482,6 +515,22 @@ void Game::update(sf::Time t_deltaTime)
 				newKey.sprite.setTextureRect(sf::IntRect(0, 0, static_cast<int>(m_keyFrameWidth), 47));
 				m_keys.push_back(newKey);
 				std::cout << "Spawned key from dead zombie\n";
+			}
+
+			if (!m_letterDropped &&
+				m_currentRoom == m_startRoom)
+			{
+				LetterDrop letter(m_zombies[i].getPosition());
+				letter.sprite.setTexture(m_letterTexture);
+				letter.sprite.setOrigin(
+					m_letterTexture.getSize().x / 2.f,
+					m_letterTexture.getSize().y / 2.f
+				);
+				letter.sprite.setPosition(letter.pos);
+				letter.sprite.setScale(1.2f, 1.2f);
+				m_letters.push_back(letter);
+				m_letterDropped = true;
+				std::cout << "Dropped letter from first zombie in start room\n";
 			}
 
 			m_zombies.erase(m_zombies.begin() + i);
@@ -662,34 +711,23 @@ void Game::update(sf::Time t_deltaTime)
 	}
 
 
-	// Update and handle dropped items
 	for (auto& item : m_droppedItems)
 	{
 		if (item.picked) continue;
-		
-		// Bobbing animation
-		item.bobTimer += t_deltaTime.asSeconds() * 2.f;
-		float offset = std::sin(item.bobTimer) * 5.f;
-		sf::Vector2f pos = item.sprite.getPosition();
-		pos.y = item.baseY + offset;
-		item.sprite.setPosition(pos);
-		
-		// Check pickup
-		sf::FloatRect itemRect = item.sprite.getGlobalBounds();
-		if (itemRect.intersects(playerBox))
+
+		if (item.sprite.getGlobalBounds().intersects(m_debugPlayerBox))
 		{
-			item.picked = true;
-			
+			// Add to player inventory
 			if (item.type == DroppedItem::Type::Health)
 			{
 				m_player.addToInventory(Player::InventoryItem::Type::Health, item.value);
-				std::cout << "Picked up health potion! +" << item.value << " HP\n";
 			}
-			else
+			else if (item.type == DroppedItem::Type::Ammo)
 			{
 				m_player.addToInventory(Player::InventoryItem::Type::Ammo, item.value);
-				std::cout << "Picked up ammo! +" << item.value << "\n";
 			}
+			item.picked = true;
+			std::cout << "Picked up dropped item!\n";
 		}
 	}
 
@@ -698,6 +736,39 @@ void Game::update(sf::Time t_deltaTime)
 		std::remove_if(m_droppedItems.begin(), m_droppedItems.end(),
 			[](const DroppedItem& i) { return i.picked; }),
 		m_droppedItems.end()
+	);
+
+	for (auto& letter : m_letters)
+	{
+		if (letter.picked)
+			continue;
+
+		// Bobbing animation
+		letter.bobTimer += t_deltaTime.asSeconds() * 2.f;
+		float offset = std::sin(letter.bobTimer) * 5.f;
+
+		sf::Vector2f pos = letter.sprite.getPosition();
+		pos.y = letter.baseY + offset;
+		letter.sprite.setPosition(pos);
+
+		// Auto-pickup on collision
+		sf::FloatRect letterRect = letter.sprite.getGlobalBounds();
+
+		if (!m_showLetterZoom &&
+			letterRect.intersects(playerBox))
+		{
+			letter.picked = true;
+			letter.sprite.setTexture(m_letterOpenTexture);
+			m_showLetterZoom = true;
+
+			std::cout << "Picked up letter!\n";
+		}
+	}
+
+	m_letters.erase(
+		std::remove_if(m_letters.begin(), m_letters.end(),
+			[](const LetterDrop& l) { return l.picked; }),
+		m_letters.end()
 	);
 
 
@@ -2008,6 +2079,14 @@ void Game::render()
 		}
 	}
 
+	for (const auto& letter : m_letters)
+	{
+		if (!letter.picked)
+		{
+			m_window.draw(letter.sprite);
+		}
+	}
+
 	// Draw bullets
 	for (const auto& b : m_bullets)
 	{
@@ -2136,6 +2215,40 @@ void Game::render()
 		numTxt.setFillColor(sf::Color(200, 200, 0));
 		numTxt.setPosition(slotBg.getPosition().x + iconSize - 16.f, slotBg.getPosition().y + 2.f);
 		m_window.draw(numTxt);
+	}
+
+	// Show zoomed letter if picked up
+	if (m_showLetterZoom)
+	{
+
+		m_window.setView(m_window.getDefaultView());
+		
+		const sf::Texture& currentLetterTex = m_letterOpened ? m_letterOpenTexture : m_letterTexture;
+
+		const float targetWidth = m_window.getSize().x / (float)m_letterTexture.getSize().x * 0.2f;
+		const float targetHeight = m_window.getSize().y / (float)m_letterTexture.getSize().y * 0.2f;
+		const float uniformScale = std::min(targetWidth, targetHeight);
+
+		sf::Sprite bigLetter(currentLetterTex);
+		bigLetter.setScale(uniformScale, uniformScale);
+		bigLetter.setOrigin(
+			currentLetterTex.getSize().x / 2.f,
+			currentLetterTex.getSize().y / 2.f
+		);
+		bigLetter.setPosition(
+			m_window.getSize().x / 2.f,
+			m_window.getSize().y / 2.f
+		);
+		m_window.draw(bigLetter);
+
+		sf::Text prompt(m_letterOpened ? "Press E to close" : "Click to open", m_uiFont, 32);
+		prompt.setFillColor(sf::Color::White);
+		prompt.setPosition(
+			m_window.getSize().x / 2.f - 120.f,
+			m_window.getSize().y / 2.f + bigLetter.getGlobalBounds().height / 2.f + 30.f
+		);
+		m_window.draw(prompt);
+		
 	}
 
 	m_window.display();
