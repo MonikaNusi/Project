@@ -1153,7 +1153,7 @@ foundDoor:
 			if (current.tiles[midY][0] == 0)
 				newRoom.x--;
 		}
-		//player is at bottom edge and this room has a down exit and not locked
+		//player is at bottom edge and this room has an down exit and not locked
 		else if (center.y > windowH - margin && current.exitDown)
 		{
 			if (current.tiles[current.height - 1][midX] == 0)
@@ -2684,6 +2684,13 @@ void Game::showGameOver()
 		m_bossMusixPlaying = false;
 	}
 
+	const float winW = static_cast<float>(m_window.getSize().x);
+	const float winH = static_cast<float>(m_window.getSize().y);
+
+	sf::RectangleShape overlay;
+	overlay.setSize(sf::Vector2f(winW, winH));
+	overlay.setFillColor(sf::Color(0, 0, 0, 180));
+
 	sf::Text gameOverText;
 	gameOverText.setFont(m_uiFont);
 	gameOverText.setString("GAME OVER");
@@ -2691,23 +2698,28 @@ void Game::showGameOver()
 	gameOverText.setFillColor(sf::Color(200, 0, 0));
 	sf::FloatRect goBounds = gameOverText.getLocalBounds();
 	gameOverText.setOrigin(goBounds.width / 2.f, goBounds.height / 2.f);
-	gameOverText.setPosition(m_window.getSize().x / 2.f, m_window.getSize().y / 2.f - 60.f);
+	gameOverText.setPosition(winW / 2.f, winH / 2.f - 100.f);
 
-	sf::Text promptText;
-	promptText.setFont(m_uiFont);
-	promptText.setString("Press ENTER to return to menu");
-	promptText.setCharacterSize(28);
-	promptText.setFillColor(sf::Color(180, 180, 180));
-	sf::FloatRect pBounds = promptText.getLocalBounds();
-	promptText.setOrigin(pBounds.width / 2.f, pBounds.height / 2.f);
-	promptText.setPosition(m_window.getSize().x / 2.f, m_window.getSize().y / 2.f + 60.f);
+	sf::FloatRect btnRect(winW / 2.f - 150.f, winH / 2.f - 5.f, 300.f, 50.f);
 
-	// Semi-transparent dark overlay
-	sf::RectangleShape overlay;
-	overlay.setSize(sf::Vector2f(
-		static_cast<float>(m_window.getSize().x),
-		static_cast<float>(m_window.getSize().y)));
-	overlay.setFillColor(sf::Color(0, 0, 0, 180));
+	sf::RectangleShape btnBg(sf::Vector2f(300.f, 50.f));
+	btnBg.setOrigin(150.f, 25.f);
+	btnBg.setPosition(winW / 2.f, winH / 2.f + 20.f);
+	btnBg.setFillColor(sf::Color(140, 30, 30, 220));
+	btnBg.setOutlineThickness(2.f);
+	btnBg.setOutlineColor(sf::Color(200, 200, 200, 160));
+
+	sf::Text btnText("Return to Menu", m_uiFont, 24);
+	sf::FloatRect btb = btnText.getLocalBounds();
+	btnText.setOrigin(btb.width / 2.f, btb.height / 2.f);
+	btnText.setPosition(winW / 2.f, winH / 2.f + 20.f);
+	btnText.setFillColor(sf::Color::White);
+
+	sf::Text hintText("Press ENTER or ESC to return", m_uiFont, 18);
+	sf::FloatRect htb = hintText.getLocalBounds();
+	hintText.setOrigin(htb.width / 2.f, htb.height / 2.f);
+	hintText.setPosition(winW / 2.f, winH / 2.f + 90.f);
+	hintText.setFillColor(sf::Color(160, 160, 160));
 
 	while (m_window.isOpen())
 	{
@@ -2727,12 +2739,34 @@ void Game::showGameOver()
 					return;
 				}
 			}
+			if (event.type == sf::Event::MouseButtonPressed &&
+				event.mouseButton.button == sf::Mouse::Left)
+			{
+				sf::Vector2f mousePos = static_cast<sf::Vector2f>(
+					sf::Mouse::getPosition(m_window));
+
+				if (btnRect.contains(mousePos))
+				{
+					return;
+				}
+			}
+			if (event.type == sf::Event::MouseMoved)
+			{
+				sf::Vector2f mousePos = static_cast<sf::Vector2f>(
+					sf::Mouse::getPosition(m_window));
+
+				btnBg.setFillColor(btnRect.contains(mousePos)
+					? sf::Color(200, 50, 50, 220)
+					: sf::Color(140, 30, 30, 220));
+			}
 		}
 
 		m_window.setView(m_window.getDefaultView());
 		m_window.draw(overlay);
 		m_window.draw(gameOverText);
-		m_window.draw(promptText);
+		m_window.draw(btnBg);
+		m_window.draw(btnText);
+		m_window.draw(hintText);
 		m_window.display();
 	}
 }
