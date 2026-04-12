@@ -341,7 +341,7 @@ void MapGenerator::generateRoomLayout(Room& room)
     {
         for (int j = 0; j < width; j++)
         {
-            //boarder = always walls
+            //boarder = always wallsS
             if (i == 0 || i == height - 1 || j == 0 || j == width - 1)
                 room.tiles[i][j] = WALL;
             else

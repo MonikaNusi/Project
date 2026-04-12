@@ -174,6 +174,11 @@ Game::Game(sf::RenderWindow& window, const DifficultySettings& difficulty) :
 	m_healthBarFront.setFillColor(sf::Color(200, 0, 0));
 	m_healthBarFront.setPosition(700.f, 20.f);
 
+	if (!m_font.loadFromFile("ASSETS/FONTS/zombiepixel.ttf"))
+	{
+		std::cout << "Failed to load menu font\n";
+	}
+
 	if (!m_keyTexture.loadFromFile("ASSETS/IMAGES/key.png"))
 	{
 		std::cout << "Failed to load key spritesheet\n";
@@ -264,6 +269,18 @@ Game::Game(sf::RenderWindow& window, const DifficultySettings& difficulty) :
 		std::cout << "Failed to load letter open texture\n";
 	}
 
+	if (!m_miaPortraitTexture.loadFromFile("ASSETS/IMAGES/mia.png"))
+	{
+		std::cout << "Failed to load Mia portrait texture\n";
+	}
+	m_miaPortraitTexture.setSmooth(false);
+
+	if (!m_lilyPortraitTexture.loadFromFile("ASSETS/IMAGES/lily.png"))
+	{
+		std::cout << "Failed to load Lily portrait texture\n";
+	}
+	m_lilyPortraitTexture.setSmooth(false);
+
 }
 
 Game::~Game()
@@ -281,7 +298,7 @@ void Game::run()
 	sf::Time timeSinceLastUpdate = sf::Time::Zero;
 	const float fps{ 60.0f };
 	sf::Time timePerFrame = sf::seconds(1.0f / fps); // 60 fps
-	while (m_window.isOpen())
+	while (m_window.isOpen() && !m_exitGame)
 	{
 		processEvents(); // as many as possible
 		timeSinceLastUpdate += clock.restart();
@@ -302,15 +319,37 @@ void Game::processEvents()
 	{
 		if ( sf::Event::Closed == newEvent.type) // window message
 		{
-			m_exitGame = true;
+			m_window.close();
 		}
-		if (sf::Event::KeyPressed == newEvent.type) //user pressed a key
+		if (sf::Event::KeyPressed == newEvent.type)
 		{
 			processKeys(newEvent);
 		}
 		if (newEvent.type == sf::Event::MouseButtonPressed &&
 			newEvent.mouseButton.button == sf::Mouse::Left)
 		{
+			if (m_isPaused)
+			{
+				const float winW = static_cast<float>(m_window.getSize().x);
+				const float winH = static_cast<float>(m_window.getSize().y);
+
+				sf::FloatRect btnRect(
+					winW / 2.f - 130.f,
+					winH / 2.f - 32.f,
+					260.f,
+					44.f
+				);
+
+				sf::Vector2f mousePos = static_cast<sf::Vector2f>(
+					sf::Mouse::getPosition(m_window));
+
+				if (btnRect.contains(mousePos))
+				{
+					m_exitGame = true;
+				}
+				return;
+			}
+
 			if (m_showLetterZoom && !m_letterOpened)
 			{
 				m_letterOpened = true;
@@ -358,12 +397,27 @@ void Game::processKeys(sf::Event t_event)
 {
 	if (sf::Keyboard::Escape == t_event.key.code)
 	{
-		m_exitGame = true;
+		if (!m_showLetterZoom) 
+		{
+			m_isPaused = !m_isPaused;
+		}
+		return;
+	}
+	if (m_isPaused)
+	{
+		if (t_event.key.code == sf::Keyboard::Return)
+			m_exitGame = true;
+		return;
 	}
 	if (sf::Keyboard::Q == t_event.key.code)
 	{
 		m_showAIDebug = !m_showAIDebug;
 	}
+	if (t_event.key.code == sf::Keyboard::Return)
+	{
+		m_exitGame = true;
+	}
+
 	if (t_event.type == sf::Event::KeyPressed)
 	{
 		if (t_event.key.code >= sf::Keyboard::Num1 && t_event.key.code <= sf::Keyboard::Num5)
@@ -413,8 +467,11 @@ void Game::update(sf::Time t_deltaTime)
 {
 	if (m_exitGame)
 	{
-		m_window.close();
+		return;
 	}
+
+	if (m_isPaused)
+		return;
 
 
 	bool ePressedNow = sf::Keyboard::isKeyPressed(sf::Keyboard::E);
@@ -1172,6 +1229,8 @@ foundDoor:
 			std::cout << "BOSS DEFEATED!\n";
 			m_bossDefeated = true;
 			m_bossZombie.reset();
+			showEnding();
+			m_exitGame = true;
 		}
 	}
 
@@ -1300,7 +1359,13 @@ void Game::spawnZombiesForRoom()
 	case MapGenerator::Room::RoomType::Normal:
 		zombieCount = m_difficulty.zombieCountNormal;
 		minionCount = m_difficulty.minionCountNormal + (std::rand() % 2);
-		
+		if (!m_bossDefeated)
+		{
+			sf::Vector2f bossSpawn = findSafeSpawn(room);
+			m_bossZombie = std::make_unique<BossZombie>(bossSpawn);
+			m_bossZombie->applyDifficulty(m_difficulty.bossHealth);
+			std::cout << "Boss zombie spawned!\n";
+		}
 
 		break;
 	case MapGenerator::Room::RoomType::Trap:
@@ -2235,21 +2300,152 @@ void Game::render()
 			currentLetterTex.getSize().x / 2.f,
 			currentLetterTex.getSize().y / 2.f
 		);
-		bigLetter.setPosition(
-			m_window.getSize().x / 2.f,
-			m_window.getSize().y / 2.f
-		);
+		float letterX = m_letterOpened
+			? m_window.getSize().x * 0.30f
+			: m_window.getSize().x / 2.f;
+
+		bigLetter.setPosition(letterX, m_window.getSize().y / 2.f);
 		m_window.draw(bigLetter);
+
+		if (m_letterOpened)
+		{
+			const std::string letterLines[] =
+			{
+				"Hi Alex If you're reading this, im dead.",
+				"",
+				"My little sister Lily wandered into this",
+				"dungeon two days ago and i had to go after her.",
+				"She had no idea how dangerous this place is",
+				"",
+				"I went to save her and I found her ribbon",
+				"near the entrance.",
+				"But I never made it far enough and got bit",
+				"",
+				"Please find her. i love her so much",
+				"and i want her to be safe.",
+				"",
+				"She's somewhere in the deepest part.",
+				"",
+				"There is resources like ammo and health potions",
+				"left from other adventurers",
+				"you can use to help you find her",
+				"",
+				"Be careful they are everywhere.",
+				"",
+				"i left a picture of her in the letter",
+				"",
+				"Find her. Please.",
+				"",
+				"                              - Mia"
+			};
+			float textX = m_window.getSize().x * 0.50f;
+			float textStartY = m_window.getSize().y * 0.12f;
+			float lineSpacing = 22.f;
+
+			float panelPadding = 14.f;
+			float panelW = 430.f;
+			float panelH = std::size(letterLines) * lineSpacing + panelPadding * 2.f;
+
+			sf::RectangleShape textPanel(sf::Vector2f(panelW, panelH));
+			textPanel.setPosition(textX - panelPadding, textStartY - panelPadding);
+			textPanel.setFillColor(sf::Color(0, 0, 0, 160));
+			textPanel.setOutlineThickness(1.f);
+			textPanel.setOutlineColor(sf::Color(255, 255, 255, 40));
+			m_window.draw(textPanel);
+
+			for (size_t i = 0; i < std::size(letterLines); ++i)
+			{
+				if (letterLines[i].empty()) continue;
+
+				sf::Text line(letterLines[i], m_font, 16);
+				line.setFillColor(sf::Color::White);
+				line.setPosition(textX, textStartY + i * lineSpacing);
+				m_window.draw(line);
+			}
+
+			if (m_miaPortraitTexture.getSize().x > 0)
+			{
+				const float portraitSize = 80.f;
+				sf::Sprite portrait(m_miaPortraitTexture);
+
+				float scaleX = portraitSize / static_cast<float>(m_miaPortraitTexture.getSize().x);
+				float scaleY = portraitSize / static_cast<float>(m_miaPortraitTexture.getSize().y);
+				portrait.setScale(scaleX, scaleY);
+
+				// Position at bottom-right corner of the panel
+				float panelRight = textX - panelPadding + panelW;
+				float panelBottom = textStartY - panelPadding + panelH;
+				portrait.setPosition(panelRight - portraitSize - 6.f, panelBottom - portraitSize - 6.f);
+
+				// Thin white border around portrait
+				sf::RectangleShape portraitBorder(sf::Vector2f(portraitSize + 4.f, portraitSize + 4.f));
+				portraitBorder.setPosition(portrait.getPosition().x - 2.f, portrait.getPosition().y - 2.f);
+				portraitBorder.setFillColor(sf::Color::Transparent);
+				portraitBorder.setOutlineThickness(2.f);
+				portraitBorder.setOutlineColor(sf::Color(255, 255, 255, 120));
+				m_window.draw(portraitBorder);
+
+				m_window.draw(portrait);
+			}
+			if (m_lilyPortraitTexture.getSize().x > 0)
+			{
+				const float portraitSize = 160.f; // bigger portrait
+
+				sf::Sprite lilyPic(m_lilyPortraitTexture);
+				float lilyScaleX = portraitSize / static_cast<float>(m_lilyPortraitTexture.getSize().x);
+				float lilyScaleY = portraitSize / static_cast<float>(m_lilyPortraitTexture.getSize().y);
+				lilyPic.setScale(lilyScaleX, lilyScaleY);
+
+				// Position below the text panel, centered
+				float panelLeft = textX - panelPadding;
+				float panelBottom = textStartY - panelPadding + panelH;
+				float lilyX = panelLeft + panelW / 2.f - portraitSize / 2.f;
+				float lilyY = panelBottom + 14.f;
+				lilyPic.setPosition(lilyX, lilyY);
+
+				// Outer dark shadow (gives depth)
+				sf::RectangleShape shadow(sf::Vector2f(portraitSize + 14.f, portraitSize + 14.f));
+				shadow.setPosition(lilyX - 5.f, lilyY - 5.f);
+				shadow.setFillColor(sf::Color(0, 0, 0, 180));
+				m_window.draw(shadow);
+
+				// Thick white photo border
+				sf::RectangleShape photoBorder(sf::Vector2f(portraitSize + 10.f, portraitSize + 22.f));
+				photoBorder.setPosition(lilyX - 5.f, lilyY - 5.f);
+				photoBorder.setFillColor(sf::Color(240, 235, 220)); // aged paper white
+				photoBorder.setOutlineThickness(2.f);
+				photoBorder.setOutlineColor(sf::Color(180, 170, 150, 200));
+				m_window.draw(photoBorder);
+
+				// Draw the actual portrait on top
+				m_window.draw(lilyPic);
+
+				// "Lily" caption on the white bottom strip of the photo
+				sf::Text lilyLabel("Lily", m_font, 13);
+				lilyLabel.setFillColor(sf::Color(40, 30, 20)); // dark ink on paper
+				sf::FloatRect llb = lilyLabel.getLocalBounds();
+				lilyLabel.setOrigin(llb.width / 2.f, 0.f);
+				lilyLabel.setPosition(
+					lilyX + portraitSize / 2.f,
+					lilyY + portraitSize + 2.f  // sits in the white strip below the image
+				);
+				m_window.draw(lilyLabel);
+			}
+		}
 
 		sf::Text prompt(m_letterOpened ? "Press E to close" : "Click to open", m_uiFont, 32);
 		prompt.setFillColor(sf::Color::White);
 		prompt.setPosition(
-			m_window.getSize().x / 2.f - 120.f,
+			50.f,
 			m_window.getSize().y / 2.f + bigLetter.getGlobalBounds().height / 2.f + 30.f
 		);
 		m_window.draw(prompt);
 		
 	}
+
+	if (m_isPaused)
+		renderPauseMenu();
+
 
 	m_window.display();
 }
@@ -2539,4 +2735,174 @@ void Game::showGameOver()
 		m_window.draw(promptText);
 		m_window.display();
 	}
+}
+
+void Game::showEnding()
+{
+	if (m_bossMusixPlaying)
+	{
+		m_bossMusic.stop();
+		m_bossMusixPlaying = false;
+	}
+
+	sf::RectangleShape overlay;
+	overlay.setSize(sf::Vector2f(
+		static_cast<float>(m_window.getSize().x),
+		static_cast<float>(m_window.getSize().y)));
+	overlay.setFillColor(sf::Color(0, 0, 0, 220));
+
+	sf::Text line1;
+	line1.setFont(m_font);
+	line1.setString("You found her.");
+	line1.setCharacterSize(60);
+	line1.setFillColor(sf::Color(220, 220, 220));
+	sf::FloatRect b1 = line1.getLocalBounds();
+	line1.setOrigin(b1.width / 2.f, b1.height / 2.f);
+	line1.setPosition(m_window.getSize().x / 2.f, m_window.getSize().y / 2.f - 130.f);
+
+	sf::Text line2;
+	line2.setFont(m_font);
+	line2.setString("She had been waiting in the dark.");
+	line2.setCharacterSize(26);
+	line2.setFillColor(sf::Color(180, 180, 180));
+	sf::FloatRect b2 = line2.getLocalBounds();
+	line2.setOrigin(b2.width / 2.f, b2.height / 2.f);
+	line2.setPosition(m_window.getSize().x / 2.f, m_window.getSize().y / 2.f - 60.f);
+
+	sf::Text line3;
+	line3.setFont(m_font);
+	line3.setString("rest now,little one.");
+	line3.setCharacterSize(22);
+	line3.setFillColor(sf::Color(160, 120, 120));
+	sf::FloatRect b3 = line3.getLocalBounds();
+	line3.setOrigin(b3.width / 2.f, b3.height / 2.f);
+	line3.setPosition(m_window.getSize().x / 2.f, m_window.getSize().y / 2.f - 10.f);
+
+
+	// Lily portrait centered on screen
+	sf::Sprite lilyPic;
+	const float portraitSize = 180.f;
+	if (m_lilyPortraitTexture.getSize().x > 0)
+	{
+		lilyPic.setTexture(m_lilyPortraitTexture);
+		float scaleX = portraitSize / static_cast<float>(m_lilyPortraitTexture.getSize().x);
+		float scaleY = portraitSize / static_cast<float>(m_lilyPortraitTexture.getSize().y);
+		lilyPic.setScale(scaleX, scaleY);
+		lilyPic.setPosition(
+			m_window.getSize().x / 2.f - portraitSize / 2.f,
+			m_window.getSize().y / 2.f + 70.f
+		);
+	}
+
+	// Photo frame for Lily portrait
+	sf::RectangleShape shadow(sf::Vector2f(portraitSize + 14.f, portraitSize + 14.f));
+	shadow.setPosition(lilyPic.getPosition().x - 5.f, lilyPic.getPosition().y - 5.f);
+	shadow.setFillColor(sf::Color(0, 0, 0, 180));
+
+	sf::RectangleShape photoBorder(sf::Vector2f(portraitSize + 10.f, portraitSize + 22.f));
+	photoBorder.setPosition(lilyPic.getPosition().x - 5.f, lilyPic.getPosition().y - 5.f);
+	photoBorder.setFillColor(sf::Color(240, 235, 220));
+	photoBorder.setOutlineThickness(2.f);
+	photoBorder.setOutlineColor(sf::Color(180, 170, 150, 200));
+
+	sf::Text prompt;
+	prompt.setFont(m_font);
+	prompt.setString("Press ENTER to return to menu");
+	prompt.setCharacterSize(18);
+	prompt.setFillColor(sf::Color(100, 100, 100));
+	sf::FloatRect pb = prompt.getLocalBounds();
+	prompt.setOrigin(pb.width / 2.f, pb.height / 2.f);
+	prompt.setPosition(
+		m_window.getSize().x / 2.f,
+		lilyPic.getPosition().y + portraitSize + 40.f
+	);
+
+	while (m_window.isOpen())
+	{
+		sf::Event event;
+		while (m_window.pollEvent(event))
+		{
+			if (event.type == sf::Event::Closed)
+			{
+				m_window.close();
+				return;
+			}
+			if (event.type == sf::Event::KeyPressed)
+			{
+				if (event.key.code == sf::Keyboard::Return ||
+					event.key.code == sf::Keyboard::Escape)
+				{
+					return;
+				}
+			}
+		}
+
+		m_window.setView(m_window.getDefaultView());
+		m_window.draw(overlay);
+		m_window.draw(line1);
+		m_window.draw(line2);
+		m_window.draw(line3);
+		m_window.draw(shadow);
+		m_window.draw(photoBorder);
+		m_window.draw(lilyPic);
+		m_window.draw(prompt);
+
+		if (m_isPaused)
+			renderPauseMenu();
+
+		m_window.display();
+	}
+}
+
+void Game::renderPauseMenu()
+{
+	m_window.setView(m_window.getDefaultView());
+
+	const float winW = static_cast<float>(m_window.getSize().x);
+	const float winH = static_cast<float>(m_window.getSize().y);
+
+	sf::RectangleShape overlay(sf::Vector2f(winW, winH));
+	overlay.setFillColor(sf::Color(0, 0, 0, 160));
+	m_window.draw(overlay);
+
+	const float panelW = 380.f;
+	const float panelH = 280.f;
+	sf::RectangleShape panel(sf::Vector2f(panelW, panelH));
+	panel.setOrigin(panelW / 2.f, panelH / 2.f);
+	panel.setPosition(winW / 2.f, winH / 2.f);
+	panel.setFillColor(sf::Color(20, 20, 30, 220));
+	panel.setOutlineThickness(3.f);
+	panel.setOutlineColor(sf::Color(180, 180, 180, 180));
+	m_window.draw(panel);
+
+	sf::Text title("GAME PAUSED", m_font, 40);
+	sf::FloatRect tb = title.getLocalBounds();
+	title.setOrigin(tb.width / 2.f, tb.height / 2.f);
+	title.setPosition(winW / 2.f, winH / 2.f - 90.f);
+	title.setFillColor(sf::Color::White);
+	m_window.draw(title);
+
+	sf::RectangleShape btnBg(sf::Vector2f(260.f, 44.f));
+	btnBg.setOrigin(130.f, 22.f);
+	btnBg.setPosition(winW / 2.f, winH / 2.f - 10.f);
+	btnBg.setFillColor(m_pauseSelectedItem == 0
+		? sf::Color(180, 50, 50, 220)
+		: sf::Color(60, 60, 70, 200));
+	btnBg.setOutlineThickness(2.f);
+	btnBg.setOutlineColor(sf::Color(200, 200, 200, 120));
+	m_window.draw(btnBg);
+
+	sf::Text menuBtn("Return to Menu", m_uiFont, 22);
+	sf::FloatRect mb = menuBtn.getLocalBounds();
+	menuBtn.setOrigin(mb.width / 2.f, mb.height / 2.f);
+	menuBtn.setPosition(winW / 2.f, winH / 2.f - 10.f);
+	menuBtn.setFillColor(sf::Color::White);
+	m_window.draw(menuBtn);
+
+	sf::Text hint("Press ESC to return to game", m_uiFont, 16);
+	sf::FloatRect hb = hint.getLocalBounds();
+	hint.setOrigin(hb.width / 2.f, hb.height / 2.f);
+	hint.setPosition(winW / 2.f, winH / 2.f + 70.f);
+	hint.setFillColor(sf::Color(180, 180, 180));
+	m_window.draw(hint);
 }

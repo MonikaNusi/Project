@@ -56,6 +56,10 @@ private:
 
 	bool m_showAIDebug = false;
 
+	// Pause menu
+	bool m_isPaused{ false };
+	int m_pauseSelectedItem{ 0 };
+
 	void processEvents();
 	void processKeys(sf::Event t_event);
 	void update(sf::Time t_deltaTime);
@@ -78,6 +82,8 @@ private:
 		const std::vector<sf::Vector2f>& usedPositions,
 		float minDistance);
 	void showGameOver();
+	void showEnding();
+	void renderPauseMenu();
 
 	Player m_player;
 	MapGenerator m_mapGenerator;
@@ -85,6 +91,9 @@ private:
 	sf::Vector2i m_currentRoom{ 0, 0 };
 	sf::Vector2i m_startRoom{ 0, 0 };  // stores the starting room coordinates
 	sf::Vector2f m_lastPlayerPos;
+
+	sf::Texture m_miaPortraitTexture;
+	sf::Texture m_lilyPortraitTexture;
 
 	sf::FloatRect m_debugPlayerBox;
 
@@ -228,6 +237,8 @@ private:
 		LetterDrop() = default;
 		LetterDrop(sf::Vector2f p) : pos(p), baseY(p.y) {}
 	};
+
+	sf::Font m_font;
 
 	std::vector<LetterDrop> m_letters;
 	sf::Texture m_letterTexture;

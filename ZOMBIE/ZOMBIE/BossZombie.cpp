@@ -9,29 +9,29 @@ sf::SoundBuffer BossZombie::m_chargeSoundBuffer;
 
 BossZombie::BossZombie(sf::Vector2f spawnPos)
 {
-	m_walkDownTex.loadFromFile("ASSETS/IMAGES/ZombieDownWalk.png");
+	m_walkDownTex.loadFromFile("ASSETS/IMAGES/ZombieDownWalk1.png");
 	m_walkDownTex.setSmooth(false);
-	m_walkUpTex.loadFromFile("ASSETS/IMAGES/ZombieUpWalk.png");
+	m_walkUpTex.loadFromFile("ASSETS/IMAGES/ZombieUpWalk1.png");
 	m_walkUpTex.setSmooth(false);
-	m_walkSideTex.loadFromFile("ASSETS/IMAGES/ZombieSideWalk.png");
+	m_walkSideTex.loadFromFile("ASSETS/IMAGES/ZombieSideWalk1.png");
 	m_walkSideTex.setSmooth(false);
 
-	m_attackDownTex.loadFromFile("ASSETS/IMAGES/ZombieDownAttack.png");
+	m_attackDownTex.loadFromFile("ASSETS/IMAGES/ZombieDownAttack1.png");
 	m_attackDownTex.setSmooth(false);
-	m_attackUpTex.loadFromFile("ASSETS/IMAGES/ZombieUpAttack.png");
+	m_attackUpTex.loadFromFile("ASSETS/IMAGES/ZombieUpAttack1.png");
 	m_attackUpTex.setSmooth(false);
-	m_attackSideTex.loadFromFile("ASSETS/IMAGES/ZombieSideAttack.png");
+	m_attackSideTex.loadFromFile("ASSETS/IMAGES/ZombieSideAttack1.png");
 	m_attackSideTex.setSmooth(false);
 
-	if (!m_deathTex.loadFromFile("ASSETS/IMAGES/ZombieDeath.png"))
+	if (!m_deathTex.loadFromFile("ASSETS/IMAGES/ZombieDeath1.png"))
 	{
 		std::cout << "Failed to load boss zombie death animation\n";
 	}
 	m_deathTex.setSmooth(false);
 
 	m_sprite.setTexture(m_walkDownTex);
-	m_sprite.setTextureRect({ 0, 0, 16, 24 });
-	m_sprite.setOrigin(8.f, 12.f);
+	m_sprite.setTextureRect({ 0, 0, 16, 28 });
+	m_sprite.setOrigin(8.f, 14.f);
 	m_sprite.setScale(m_baseScale, m_baseScale);
 	m_sprite.setPosition(spawnPos);
 
@@ -135,7 +135,7 @@ void BossZombie::setState(State newState)
 		m_chargeTimer = 0.f;
 		if (m_chargeSoundBuffer.getDuration().asSeconds() > 0.f)
 			m_chargeSound.play();
-	}
+    }
 	else if (m_state == State::SummonMinions)
 	{
 		m_summonTimer = 0.f;
@@ -432,7 +432,7 @@ void BossZombie::animate(sf::Time dt)
 	m_frameTimer = 0.f;
 	m_frameIndex++;
 
-	// Death animation
+
 	if (m_state == State::Dying)
 	{
 		if (m_frameIndex >= m_deathFrameCount)
@@ -445,6 +445,7 @@ void BossZombie::animate(sf::Time dt)
 
 		m_sprite.setTexture(m_deathTex);
 		m_sprite.setTextureRect({ m_frameIndex * 29, 0, 29, 24 });
+		m_sprite.setOrigin(14.5f, 12.f);
 		m_sprite.setScale(m_baseScale, m_baseScale);
 		return;
 	}
@@ -457,49 +458,55 @@ void BossZombie::animate(sf::Time dt)
 		if (m_facing == Facing::Down)
 		{
 			m_sprite.setTexture(m_attackDownTex);
-			m_sprite.setTextureRect({ m_frameIndex * 22, 0, 22, 30 });
+			m_sprite.setTextureRect({ m_frameIndex * 22, 0, 22, 37 });
+			m_sprite.setOrigin(11.f, 18.5f);
 			m_sprite.setScale(m_baseScale, m_baseScale);
 		}
 		else if (m_facing == Facing::Up)
 		{
 			m_sprite.setTexture(m_attackUpTex);
-			m_sprite.setTextureRect({ m_frameIndex * 27, 0, 27, 24 });
+			m_sprite.setTextureRect({ m_frameIndex * 27, 0, 27, 27 });
+			m_sprite.setOrigin(13.5f, 13.5f);
 			m_sprite.setScale(m_baseScale, m_baseScale);
 		}
 		else
 		{
 			m_sprite.setTexture(m_attackSideTex);
-			m_sprite.setTextureRect({ m_frameIndex * 30, 0, 30, 23 });
+			m_sprite.setTextureRect({ m_frameIndex * 29, 0, 29, 29 });
+			m_sprite.setOrigin(14.5f, 14.5f);
 			float sign = (m_velocity.x < 0.f) ? -1.f : 1.f;
 			m_sprite.setScale(sign * m_baseScale, m_baseScale);
 		}
+		return;
 	}
-	// Walk animation
+
+
+	m_frameIndex %= 8;
+
+	if (m_facing == Facing::Down)
+	{
+		m_sprite.setTexture(m_walkDownTex);
+		m_sprite.setTextureRect({ m_frameIndex * 16, 0, 16, 28 });
+		m_sprite.setOrigin(8.f, 14.f);
+		m_sprite.setScale(m_baseScale, m_baseScale);
+	}
+	else if (m_facing == Facing::Up)
+	{
+		m_sprite.setTexture(m_walkUpTex);
+		m_sprite.setTextureRect({ m_frameIndex * 16, 0, 16, 33 });
+		m_sprite.setOrigin(8.f, 16.5f);
+		m_sprite.setScale(m_baseScale, m_baseScale);
+	}
 	else
 	{
-		m_frameIndex %= 8;
-
-		if (m_facing == Facing::Down)
-		{
-			m_sprite.setTexture(m_walkDownTex);
-			m_sprite.setTextureRect({ m_frameIndex * 16, 0, 16, 24 });
-			m_sprite.setScale(m_baseScale, m_baseScale);
-		}
-		else if (m_facing == Facing::Up)
-		{
-			m_sprite.setTexture(m_walkUpTex);
-			m_sprite.setTextureRect({ m_frameIndex * 16, 0, 16, 24 });
-			m_sprite.setScale(m_baseScale, m_baseScale);
-		}
-		else
-		{
-			m_sprite.setTexture(m_walkSideTex);
-			m_sprite.setTextureRect({ m_frameIndex * 16, 0, 16, 24 });
-			float sign = (m_velocity.x < 0.f) ? -1.f : 1.f;
-			m_sprite.setScale(sign * m_baseScale, m_baseScale);
-		}
+		m_sprite.setTexture(m_walkSideTex);
+		m_sprite.setTextureRect({ m_frameIndex * 16, 0, 16, 33 });
+		m_sprite.setOrigin(8.f, 16.5f);
+		float sign = (m_velocity.x < 0.f) ? -1.f : 1.f;
+		m_sprite.setScale(sign * m_baseScale, m_baseScale);
 	}
 }
+
 
 void BossZombie::applyDifficulty(int health)
 {
