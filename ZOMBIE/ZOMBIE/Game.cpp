@@ -1836,32 +1836,49 @@ sf::Vector2f Game::findSafeSpawn(const MapGenerator::Room& room)
 	float tileW = (float)windowW / room.width;
 	float tileH = (float)windowH / room.height;
 
-	//Try the center first
+	// Helper: returns true if tile (x,y) is a floor tile with all 8 neighbours also floor
+	auto isSafeFloor = [&](int x, int y) -> bool
+	{
+		if (x < 1 || y < 1 || x >= room.width - 1 || y >= room.height - 1)
+			return false;
+		if (room.tiles[y][x] != 0)
+			return false;
+		for (int dy = -1; dy <= 1; ++dy)
+			for (int dx = -1; dx <= 1; ++dx)
+				if (room.tiles[y + dy][x + dx] != 0)
+					return false;
+		return true;
+	};
+
+	// Try center first
 	int cx = room.width / 2;
 	int cy = room.height / 2;
+	if (isSafeFloor(cx, cy))
+		return { cx * tileW + tileW * 0.5f, cy * tileH + tileH * 0.5f };
 
-	if (room.tiles[cy][cx] == 0) //floor
+	// Spiral outward from center to find the nearest safe tile
+	for (int radius = 1; radius < std::max(room.width, room.height); ++radius)
 	{
-		return {
-			cx * tileW + tileW * 0.5f,
-			cy * tileH + tileH * 0.5f
-		};
-	}
-
-	//Otherwise search for any nearby floor tile
-	for (int y = 1; y < room.height - 1; ++y)
-	{
-		for (int x = 1; x < room.width - 1; ++x)
+		for (int dy = -radius; dy <= radius; ++dy)
 		{
-			if (room.tiles[y][x] == 0)
+			for (int dx = -radius; dx <= radius; ++dx)
 			{
-				return {
-					x * tileW + tileW * 0.5f,
-					y * tileH + tileH * 0.5f
-				};
+				if (std::abs(dx) != radius && std::abs(dy) != radius)
+					continue; // only check the ring edge
+
+				int x = cx + dx;
+				int y = cy + dy;
+				if (isSafeFloor(x, y))
+					return { x * tileW + tileW * 0.5f, y * tileH + tileH * 0.5f };
 			}
 		}
 	}
+
+	// Last resort: any floor tile (original behaviour)
+	for (int y = 1; y < room.height - 1; ++y)
+		for (int x = 1; x < room.width - 1; ++x)
+			if (room.tiles[y][x] == 0)
+				return { x * tileW + tileW * 0.5f, y * tileH + tileH * 0.5f };
 
 	return { windowW / 2.f, windowH / 2.f };
 }
@@ -2598,29 +2615,38 @@ sf::Vector2f Game::findUniqueSpawn(const MapGenerator::Room& room,
 	float tileW = (float)windowW / room.width;
 	float tileH = (float)windowH / room.height;
 
-	// Try up to 50 times to find a unique spawn position
-	for (int attempt = 0; attempt < 50; attempt++)
-{
-		// Generate random position on a floor tile
-		int x =  2 + (std::rand() % (room.width - 4));
+	// Returns true only if the tile and all 8 neighbours are floor tiles
+	auto isSafeFloor = [&](int x, int y) -> bool
+	{
+		if (x < 1 || y < 1 || x >= room.width - 1 || y >= room.height - 1)
+			return false;
+		if (room.tiles[y][x] != 0)
+			return false;
+		for (int dy = -1; dy <= 1; ++dy)
+			for (int dx = -1; dx <= 1; ++dx)
+				if (room.tiles[y + dy][x + dx] != 0)
+					return false;
+		return true;
+	};
+
+	for (int attempt = 0; attempt < 50; ++attempt)
+	{
+		int x = 2 + (std::rand() % (room.width - 4));
 		int y = 2 + (std::rand() % (room.height - 4));
 
-		if (room.tiles[y][x] != 0) continue;  // Not a floor tile
+		if (!isSafeFloor(x, y)) continue;
 
 		sf::Vector2f candidate(
 			x * tileW + tileW * 0.5f,
 			y * tileH + tileH * 0.5f
 		);
 
-		// Check if this position is far enough from all used positions
 		bool validPosition = true;
 		for (const auto& usedPos : usedPositions)
 		{
 			float dx = candidate.x - usedPos.x;
 			float dy = candidate.y - usedPos.y;
-			float distSq = dx * dx + dy * dy;
-
-			if (distSq < minDistance * minDistance)
+			if (dx * dx + dy * dy < minDistance * minDistance)
 			{
 				validPosition = false;
 				break;
@@ -2628,9 +2654,7 @@ sf::Vector2f Game::findUniqueSpawn(const MapGenerator::Room& room,
 		}
 
 		if (validPosition)
-		{
 			return candidate;
-		}
 	}
 
 	return findSafeSpawn(room);
