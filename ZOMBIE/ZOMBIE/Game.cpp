@@ -135,22 +135,15 @@ Game::Game(sf::RenderWindow& window, const DifficultySettings& difficulty) :
 				m_startRoom = { x, y };
 			}
 
-	const auto& newRoomObj = m_mapGenerator.getRoom(m_nextRoom.x, m_nextRoom.y);
-
-	int dirX = m_nextRoom.x - m_currentRoom.x;  // -1, 0, or 1
-	int dirY = m_nextRoom.y - m_currentRoom.y;  // -1, 0, or 1
-
-	sf::Vector2f doorPos = getDoorSpawn(newRoomObj, dirX, dirY);
-	m_player.setPosition(doorPos.x, doorPos.y);
-
+	const auto& startRoomObj = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
+	sf::Vector2f spawnPos = findSafeSpawn(startRoomObj);
+	m_player.setPosition(spawnPos.x, spawnPos.y);
 
 	m_cameraView = m_window.getDefaultView();
 	m_cameraView.setCenter(m_window.getSize().x / 2.f, m_window.getSize().y / 2.f);
-	//m_lastPlayerPos = m_player.getPosition();
 
 	m_visitedRooms.resize(6, std::vector<bool>(8, false));
-	m_visitedRooms[m_currentRoom.y][m_currentRoom.x] = true; //start rooms visited
-
+	m_visitedRooms[m_currentRoom.y][m_currentRoom.x] = true;
 
 	spawnZombiesForRoom();
 	
@@ -2089,41 +2082,18 @@ void Game::render()
 			}
 		}
 
-		// Draw zombie hitbox
-		sf::RectangleShape hb;
-		auto zb = z.getHitbox();
-		hb.setPosition(zb.left, zb.top);
-		hb.setSize({ zb.width, zb.height });
-		hb.setFillColor(sf::Color(0, 255, 0, 120));
-		m_window.draw(hb);
 	}
 
 	// Draw boss zombie
 	if (m_bossZombie)
 	{
 		m_bossZombie->render(m_window);
-
-		// Debug hitbox for boss
-		sf::RectangleShape hb;
-		auto bossHitbox = m_bossZombie->getHitbox();
-		hb.setPosition(bossHitbox.left, bossHitbox.top);
-		hb.setSize({ bossHitbox.width, bossHitbox.height });
-		hb.setFillColor(sf::Color(255, 0, 255, 120));
-		m_window.draw(hb);
 	}
 
 	// Draw minions
 	for (auto& minion : m_minions)
 	{
 		minion.render(m_window);
-
-		// Debug hitbox for minion
-		sf::RectangleShape hb;
-		auto minionHitbox = minion.getHitbox();
-		hb.setPosition(minionHitbox.left, minionHitbox.top);
-		hb.setSize({ minionHitbox.width, minionHitbox.height });
-		hb.setFillColor(sf::Color(255, 255, 0, 120));
-		m_window.draw(hb);
 	}
 
 	// draw dropped keys with animation
@@ -2176,19 +2146,14 @@ void Game::render()
 
 	drawLightOverlay(m_window, playerCenter, torchPositions, windowW, windowH, m_difficulty.ambientLight, m_difficulty.playerLightRadius, m_difficulty.torchLightRadius, m_difficulty.level == DifficultySettings::Level::Hard);
 
-	m_window.setView(m_cameraView);
-
+	// draw UI in screen space
 	m_window.setView(m_window.getDefaultView());
 
-	sf::RectangleShape hb;
-	hb.setPosition(m_debugPlayerBox.left, m_debugPlayerBox.top);
-	hb.setSize({ m_debugPlayerBox.width, m_debugPlayerBox.height });
-	hb.setFillColor(sf::Color(255, 0, 0, 120));
-	m_window.draw(hb);
+	
 
 
 	// draw UI in screen space
-	m_window.setView(m_window.getDefaultView());
+	//m_window.setView(m_window.getDefaultView());
 
 	m_window.draw(m_ammoText);
 

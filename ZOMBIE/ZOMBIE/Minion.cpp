@@ -56,13 +56,13 @@ sf::FloatRect Minion::getBounds() const
 sf::FloatRect Minion::getHitbox() const
 {
     sf::FloatRect b = m_sprite.getGlobalBounds();
-    
-    float w = b.width * 0.35f;
-    float h = b.height * 0.25f;
+
+    float w = b.width * 0.50f;
+    float h = b.height * 0.55f;
 
     return sf::FloatRect(
         b.left + (b.width - w) * 0.5f,
-        b.top + b.height - h,
+        b.top + b.height * 0.25f,
         w,
         h
     );
