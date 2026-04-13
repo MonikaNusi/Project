@@ -244,6 +244,19 @@ Game::Game(sf::RenderWindow& window, const DifficultySettings& difficulty) :
 		std::cout << "Successfully loaded boss music\n";
 	}
 
+	if (!m_dungeonMusic.openFromFile("ASSETS/SOUNDS/music.wav"))
+	{
+		std::cout << "Failed to load dungeon music\n";
+	}
+	else
+	{
+		m_dungeonMusic.setLoop(true);
+		m_dungeonMusic.setVolume(40.f);
+		m_dungeonMusic.play();
+		m_dungeonMusicPlaying = true;
+		std::cout << "Dungeon music started\n";
+	}
+
 	Bullet::loadTexture();
 
 	if (!m_torchTexture.loadFromFile("ASSETS/IMAGES/torch.png"))
@@ -282,6 +295,11 @@ Game::~Game()
 	if (m_bossMusic.getStatus() == sf::Music::Playing)
 	{
 		m_bossMusic.stop();
+	}
+
+	if (m_dungeonMusic.getStatus() == sf::Music::Playing)
+	{
+		m_dungeonMusic.stop();
 	}
 }
 
@@ -440,19 +458,31 @@ void Game::updateBossMusic()
 	const auto& currentRoomData = m_mapGenerator.getRoom(m_currentRoom.x, m_currentRoom.y);
 	bool inBossRoom = (currentRoomData.type == MapGenerator::Room::RoomType::Boss);
 
-	// Start music when entering boss room
+	// Start boss music and pause dungeon music when entering boss room
 	if (inBossRoom && !m_bossMusixPlaying && !m_bossDefeated)
 	{
+		if (m_dungeonMusicPlaying)
+		{
+			m_dungeonMusic.pause();
+			m_dungeonMusicPlaying = false;
+		}
 		m_bossMusic.play();
 		m_bossMusixPlaying = true;
 		std::cout << "Boss music started\n";
 	}
-	// Stop music when leaving boss room or boss is defeated
+	// Stop boss music and resume dungeon music when leaving boss room or boss defeated
 	else if ((!inBossRoom || m_bossDefeated) && m_bossMusixPlaying)
 	{
 		m_bossMusic.stop();
 		m_bossMusixPlaying = false;
 		std::cout << "Boss music stopped\n";
+
+		if (!m_bossDefeated && m_dungeonMusic.getStatus() != sf::Music::Playing)
+		{
+			m_dungeonMusic.play();
+			m_dungeonMusicPlaying = true;
+			std::cout << "Dungeon music resumed\n";
+		}
 	}
 }
 
@@ -2668,6 +2698,12 @@ void Game::showGameOver()
 		m_bossMusixPlaying = false;
 	}
 
+	if (m_dungeonMusicPlaying)
+	{
+		m_dungeonMusic.stop();
+		m_dungeonMusicPlaying = false;
+	}
+
 	const float winW = static_cast<float>(m_window.getSize().x);
 	const float winH = static_cast<float>(m_window.getSize().y);
 
@@ -2761,6 +2797,12 @@ void Game::showEnding()
 	{
 		m_bossMusic.stop();
 		m_bossMusixPlaying = false;
+	}
+
+	if (m_dungeonMusicPlaying)
+	{
+		m_dungeonMusic.stop();
+		m_dungeonMusicPlaying = false;
 	}
 
 	sf::RectangleShape overlay;

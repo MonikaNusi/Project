@@ -227,6 +227,9 @@ private:
 
 	std::map<std::pair<int, int>, std::vector<Minion>> m_roomMinions;
 
+	sf::Music m_dungeonMusic;
+	bool m_dungeonMusicPlaying{ false };
+
 	struct LetterDrop
 	{
 		sf::Vector2f pos;
