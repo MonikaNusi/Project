@@ -1353,13 +1353,7 @@ void Game::spawnZombiesForRoom()
 		zombieCount = m_difficulty.zombieCountNormal;
 		minionCount = m_difficulty.minionCountNormal + (std::rand() % 2);
 
-		if (!m_bossDefeated)
-		{
-			sf::Vector2f bossSpawn = findSafeSpawn(room);
-			m_bossZombie = std::make_unique<BossZombie>(bossSpawn);
-			m_bossZombie->applyDifficulty(m_difficulty.bossHealth);
-			std::cout << "Boss zombie spawned!\n";
-		}
+
 
 		break;
 	case MapGenerator::Room::RoomType::Trap:
